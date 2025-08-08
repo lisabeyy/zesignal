@@ -56,8 +56,11 @@ export default function Home() {
     setIsSearching(true);
     setMcpStatus('connecting');
     
-    // Clear search input
+    // Clear search input and reset all states (like "Search New Token" button)
     setSearchQuery('');
+    setSelectedToken(null);
+    setComparisonTokens([]);
+    setComparingLoading(false);
     
     try {
       // Show connecting status briefly
@@ -134,50 +137,30 @@ export default function Home() {
 
   const findSimilarTokensAndCompare = async (selectedTokenData: SelectedToken) => {
     try {
-      // Get top 50 trending coins and filter by market cap similarity
-      const response = await fetch('/api/trending');
-      const data = await response.json();
-      const allTokens = data.results || [];
-      
-      // Filter tokens to find ones in similar market cap ranges
-      const selectedMarketCap = selectedTokenData.market_cap;
-      
-      // Define market cap ranges for better comparisons
-      let similarTokens = [];
-      
-      if (selectedMarketCap > 10e9) {
-        // Large cap: compare with other large caps (>$10B)
-        similarTokens = allTokens.filter((token: SelectedToken) => 
-          token.id !== selectedTokenData.id && token.market_cap > 5e9
-        );
-      } else if (selectedMarketCap > 1e9) {
-        // Mid cap: compare with mid caps ($1B-$50B)
-        similarTokens = allTokens.filter((token: SelectedToken) => 
-          token.id !== selectedTokenData.id && 
-          token.market_cap > 500e6 && 
-          token.market_cap < 50e9
-        );
-      } else if (selectedMarketCap > 100e6) {
-        // Small cap: compare with small-mid caps ($100M-$10B)
-        similarTokens = allTokens.filter((token: SelectedToken) => 
-          token.id !== selectedTokenData.id && 
-          token.market_cap > 50e6 && 
-          token.market_cap < 10e9
-        );
-      } else {
-        // Micro cap: compare with anything larger
-        similarTokens = allTokens.filter((token: SelectedToken) => 
-          token.id !== selectedTokenData.id && 
-          token.market_cap > selectedMarketCap
-        );
-      }
-      
-      // If we don't have enough similar tokens, fall back to top tokens
-      const topTokens = similarTokens.length >= 3 
-        ? similarTokens.slice(0, 4)
-        : allTokens.filter((token: SelectedToken) => token.id !== selectedTokenData.id).slice(0, 4);
+      // Use category-based approach to find similar projects
+      const categoryResponse = await fetch('/api/similar-by-category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          coinId: selectedTokenData.id,
+          marketCap: selectedTokenData.market_cap
+        })
+      });
 
-      const comparisons = topTokens
+      const categoryData = await categoryResponse.json();
+      
+      if (!categoryData.success || !categoryData.results) {
+        console.error('Failed to get similar projects by category');
+        setComparisonTokens([]);
+        return;
+      }
+
+      const similarTokens = categoryData.results;
+
+      // Create comparisons with the category-based results
+      const comparisons = similarTokens
         .filter((token: SelectedToken) => token.id !== selectedTokenData.id)
         .slice(0, 3)
         .map((token: SelectedToken) => {
@@ -199,8 +182,12 @@ export default function Home() {
         });
 
       setComparisonTokens(comparisons);
+      
+      if (comparisons.length === 0) {
+        console.log('No similar tokens found in same categories with higher market cap');
+      }
     } catch (error) {
-      console.error('Error finding similar tokens:', error);
+      console.error('Error finding similar tokens by category:', error);
       setComparisonTokens([]);
     }
   };
