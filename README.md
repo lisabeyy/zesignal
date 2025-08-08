@@ -19,7 +19,7 @@ A beautiful, modern web application that helps you compare cryptocurrency market
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/geckocap.git
+   git clone https://github.com/mdzor/geckocap.git
    cd geckocap
    ```
 
@@ -28,12 +28,6 @@ A beautiful, modern web application that helps you compare cryptocurrency market
    npm install
    # or
    yarn install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   # Create .env.local file if needed for any configuration
-   # Currently runs with public CoinGecko MCP endpoint
    ```
 
 4. **Run the development server**
@@ -46,12 +40,6 @@ A beautiful, modern web application that helps you compare cryptocurrency market
 5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### Building for Production
-
-```bash
-npm run build
-npm start
-```
 
 ## 📖 How It Works
 
@@ -68,13 +56,6 @@ npm start
   - **Mid Cap** ($1B-$10B): Compared with tokens $500M-$50B  
   - **Small Cap** ($100M-$1B): Compared with tokens $50M-$10B
   - **Micro Cap** (<$100M): Compared with anything larger
-
-## 🎯 Use Cases
-
-- **Educational Tool**: Learn about market cap relationships
-- **Research Aid**: Quick comparison of similar projects  
-- **Investment Research**: Understand potential upside (educational only)
-- **Market Analysis**: Visualize market cap distributions
 
 ## 🔧 Integration
 
@@ -112,60 +93,7 @@ const trending = await mcpClient.getTrendingCoins();
 └── README.md                  # You are here!
 ```
 
-
-## 🎨 Design Philosophy
-
-- **Minimalist**: Clean, focused interface without distractions
-- **Educational**: Clear explanations and transparent calculations  
-- **Professional**: Enterprise-grade UI suitable for research
-- **Accessible**: Works on all devices and screen sizes
-- **Performance**: Optimized loading and smooth animations
-
-## ⚠️ Important Disclaimers
-
-> **Educational Use Only**: This tool is designed for educational and informational purposes. The projections and comparisons are purely theoretical and should not be considered financial advice.
-
-> **High Risk**: Cryptocurrency investments are highly volatile and risky. Always conduct your own research and consult with financial professionals.
-
-> **Data Accuracy**: While we use reliable data sources, market data can change rapidly and calculations are approximate.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Development Guidelines
-
-1. Follow TypeScript best practices
-2. Use Tailwind CSS for styling
-3. Maintain responsive design principles
-4. Add proper error handling
-5. Include appropriate disclaimers for financial data
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **CoinGecko** for providing comprehensive cryptocurrency data via MCP
-- **Next.js Team** for the excellent React framework
-- **Tailwind CSS** for the utility-first CSS framework
-- **Lucide** for beautiful, consistent icons
-
-## 📞 Support
-
-If you have any questions or run into issues:
-
-1. Check the [Issues](https://github.com/yourusername/geckocap/issues) page
-2. Create a new issue with detailed information
-3. Join our community discussions
-
 ---
-
-<div align="center">
 
 **Built with ❤️ for the crypto community**
 
-[🌐 Live Demo](https://your-demo-url.com) • [📝 Report Bug](https://github.com/yourusername/geckocap/issues) • [✨ Request Feature](https://github.com/yourusername/geckocap/issues)
-
-</div>
