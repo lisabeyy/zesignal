@@ -151,7 +151,7 @@ class MCPClient {
 
         if (symbolResponse.content && Array.isArray(symbolResponse.content) && symbolResponse.content.length > 0) {
           const symbolData = JSON.parse(symbolResponse.content[0].text || '[]');
-          symbolResults = symbolData.map((coin: any) => ({
+          symbolResults = symbolData.map((coin: CoinMarketData) => ({
             id: coin.id,
             name: coin.name,
             symbol: coin.symbol.toUpperCase(),
@@ -160,7 +160,7 @@ class MCPClient {
             market_cap_rank: coin.market_cap_rank
           }));
         }
-      } catch (symbolError) {
+      } catch {
         console.log('Symbol search failed, continuing with name search');
       }
 
@@ -180,7 +180,7 @@ class MCPClient {
             status: 'active'
           }
         });
-      } catch (connectionError) {
+      } catch {
         console.log('Connection lost, attempting to reconnect...');
         await this.disconnect();
         await this.connect();
@@ -220,7 +220,7 @@ class MCPClient {
       });
 
       // Sort filtered results to prioritize exact matches and main tokens
-      filteredCoins.sort((a: any, b: any) => {
+      filteredCoins.sort((a: { name: string; symbol: string; id: string }, b: { name: string; symbol: string; id: string }) => {
         const queryLower = query.toLowerCase();
         
         // Exact name match first
