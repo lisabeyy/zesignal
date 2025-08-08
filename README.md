@@ -63,7 +63,7 @@ const coinData = await mcpClient.getCoinData(['bitcoin']);
 
 // Get trending coins
 const trending = await mcpClient.getTrendingCoins();
-
+```
 
 ### Prerequisites
 
