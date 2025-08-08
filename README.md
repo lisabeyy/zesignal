@@ -12,36 +12,23 @@ A beautiful, modern web application that helps you compare cryptocurrency market
 
 ## 🚀 Getting Started
 
-### Prerequisites
+## 📁 Project Structure
 
-- Node.js 18+ 
-- npm or yarn
-- CoinGecko MCP Server access
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mdzor/geckocap.git
-   cd geckocap
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-
-4. **Run the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+```
+├── src/
+│   ├── app/                    # Next.js 13+ app router
+│   │   ├── api/               # API routes for MCP integration
+│   │   ├── globals.css        # Global styles
+│   │   ├── layout.tsx         # Root layout
+│   │   └── page.tsx           # Main application page
+│   ├── components/            # Reusable components
+│   │   └── AnimatedBackground.tsx  # WebGL background
+│   └── lib/                   # Utilities and configurations
+│       └── mcp-client.ts      # MCP client implementation
+├── public/                    # Static assets
+├── tailwind.config.ts         # Tailwind configuration
+└── README.md                  # You are here!
+```
 
 
 ## 📖 How It Works
@@ -76,24 +63,38 @@ const coinData = await mcpClient.getCoinData(['bitcoin']);
 
 // Get trending coins
 const trending = await mcpClient.getTrendingCoins();
-```
 
-## 📁 Project Structure
 
-```
-├── src/
-│   ├── app/                    # Next.js 13+ app router
-│   │   ├── api/               # API routes for MCP integration
-│   │   ├── globals.css        # Global styles
-│   │   ├── layout.tsx         # Root layout
-│   │   └── page.tsx           # Main application page
-│   ├── components/            # Reusable components
-│   │   └── AnimatedBackground.tsx  # WebGL background
-│   └── lib/                   # Utilities and configurations
-│       └── mcp-client.ts      # MCP client implementation
-├── public/                    # Static assets
-├── tailwind.config.ts         # Tailwind configuration
-└── README.md                  # You are here!
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- CoinGecko MCP Server access
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/mdzor/geckocap.git
+   cd geckocap
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 ```
 
 ---
