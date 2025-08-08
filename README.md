@@ -2,6 +2,8 @@
 
 A beautiful, modern web application that helps you compare cryptocurrency market capitalizations and visualize potential price projections. Built with Next.js and powered by CoinGecko's MCP (Model Context Protocol) Server.
 
+![GeckoCap App Screenshot](https://lkrqcaxgingqjswmtdkw.supabase.co/storage/v1/object/public/images/Random/geckocap-screencap.png)
+
 ![GeckoCap Preview](https://img.shields.io/badge/Status-Live-brightgreen)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
