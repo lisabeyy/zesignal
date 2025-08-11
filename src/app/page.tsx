@@ -223,13 +223,7 @@ export default function Home() {
     return num?.toFixed(0) || '0';
   };
 
-  const ZELogo = () => (
-    <div className="flex items-center space-x-1">
-      <div className="text-3xl font-black bg-gradient-to-r from-lime-400 to-yellow-300 bg-clip-text text-transparent tracking-tight transform -skew-x-12" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        ZE
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="min-h-screen bg-black text-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -237,8 +231,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <ZELogo />
-              <div className="text-xl font-semibold" style={{ color: '#D0FF80' }}>SIGNAL</div>
+              <img src="/logo.svg" alt="ZeSignal Logo" className="h-8 w-auto" />
               <div className="hidden sm:block text-sm text-gray-500 px-3 py-1 bg-gray-800/50 rounded-full">
                 AI-Powered Crypto Intelligence
               </div>
