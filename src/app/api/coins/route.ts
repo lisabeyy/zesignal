@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mcpClient } from '@/lib/mcp-client';
+import { getCoinData } from '@/lib/mcp-coingecko';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const coinIds = ids.split(',').map(id => id.trim()).filter(id => id.length > 0);
-    const results = await mcpClient.getCoinData(coinIds, vsCurrency);
+    const results = await getCoinData(coinIds);
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Coins API error:', error);
