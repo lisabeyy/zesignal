@@ -153,7 +153,7 @@ interface ApiResponse {
 }
 
 export default function Home() {
-  const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
+  const [selectedCrypto, setSelectedCrypto] = useState<string | null>(null);
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -161,7 +161,15 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [expandedAnalysis, setExpandedAnalysis] = useState(false);
 
-  // Set default token from URL parameter or default to bitcoin
+  // Auto-expand on mobile for better UX
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setExpandedAnalysis(true);
+    }
+  }, []);
+
+  // Set default token from URL parameter only if provided
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenParam = urlParams.get('token');
@@ -175,6 +183,13 @@ export default function Home() {
       }
     }
   }, []);
+
+  // Fetch data when a token is selected
+  useEffect(() => {
+    if (selectedCrypto) {
+      fetchData(selectedCrypto);
+    }
+  }, [selectedCrypto]);
 
   // Helper function to fix sentence spacing in AI-generated text
   const fixSentenceSpacing = (text: string): string => {
@@ -207,7 +222,9 @@ export default function Home() {
     { id: 'taraxa', name: 'Taraxa', symbol: 'TARA', color: 'from-lime-400 to-lime-600', sentimentKey: 'taraxa' }
   ];
 
-  const fetchData = async (cryptoId: string) => {
+  const fetchData = async (cryptoId: string | null) => {
+    if (!cryptoId) return;
+
     setLoading(true);
     setError(null);
     setExpandedAnalysis(false);
@@ -483,7 +500,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300">
             <div className="flex items-center">
@@ -497,7 +514,7 @@ export default function Home() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-gray-300 mb-3">Pick a token</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {cryptoOptions.map((crypto) => (
             <button
               key={crypto.id}
@@ -516,7 +533,29 @@ export default function Home() {
           ))}
         </div>
 
-        {loading ? (
+        {!selectedCrypto ? (
+          <div className="text-center py-16">
+            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-gray-700 shadow-xl">
+              <BarChart3 className="w-20 h-20 mx-auto mb-6 opacity-50" />
+              <h3 className="text-2xl font-bold text-gray-300 mb-4">Select a Cryptocurrency</h3>
+              <p className="text-gray-500 mb-6">Choose a token from above to view real-time market data, social sentiment analysis, and AI-powered trading insights.</p>
+              <div className="flex justify-center space-x-4">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-blue-600">📊</div>
+                  <p className="text-xs text-gray-400">Market Data</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-lime-600">💬</div>
+                  <p className="text-xs text-gray-400">Social Sentiment</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-purple-600">🤖</div>
+                  <p className="text-xs text-gray-400">AI Analysis</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400 mx-auto mb-4"></div>
@@ -528,7 +567,7 @@ export default function Home() {
           <>
             {/* Market Data Section - Full Width Above */}
             <div className="mb-8">
-              <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
+              <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-700 shadow-xl">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center">
                     <BarChart3 className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
@@ -586,7 +625,7 @@ export default function Home() {
             </div>
 
             {/* Social Sentiment Section - Full Width Below */}
-            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
+            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-700 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <Users className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
@@ -648,7 +687,7 @@ export default function Home() {
                   </div>
 
                   {/* AI Sentiment Analysis - Full Width */}
-                  <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50">
+                  <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-gray-600/50">
                     <h5 className="text-base font-semibold text-gray-400 mb-4">AI SENTIMENT ANALYSIS</h5>
                     {!expandedAnalysis ? (
                       <>
@@ -665,7 +704,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <div className="max-h-64 overflow-y-auto">
+                        <div className="max-h-64 md:max-h-64 max-h-96 overflow-y-auto">
                           {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => (
                             <div key={line?.key} className={`mb-4 ${line?.isBold ? 'font-bold text-white text-lg' : 'text-gray-300 text-base'} leading-relaxed`}>
                               {line?.text}
@@ -687,7 +726,7 @@ export default function Home() {
 
                   {/* Trending Posts - Full Width Below Everything */}
                   {sentimentData && sentimentData.trendingPosts && Array.isArray(sentimentData.trendingPosts) && sentimentData.trendingPosts.length > 0 && (
-                    <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50">
+                    <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-gray-600/50">
                       <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
                         <span>TRENDING POSTS</span>
                         <svg className="w-4 h-4 ml-2 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
@@ -700,7 +739,7 @@ export default function Home() {
                           {sentimentData.trendingPosts.slice(0, 6).map((post, index) => {
 
                             return (
-                              <div key={index} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
+                              <div key={index} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-3 md:p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
                                 {/* Creator Info */}
                                 {post.creator && (
                                   <div className="flex items-center space-x-3 mb-3">
