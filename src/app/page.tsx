@@ -982,7 +982,7 @@ export default function Home() {
               </div>
 
               {/* Compact Divergence Explanation */}
-              <div className="w-full p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="w-full hidden p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                 <div className="text-xs text-blue-300 leading-relaxed">
                   <strong>Divergence:</strong> Price and sentiment moving in opposite directions often signal trend reversals.
                   Bullish divergence (price down, sentiment up) suggests oversold bounce potential.
