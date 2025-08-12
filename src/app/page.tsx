@@ -612,7 +612,13 @@ export default function Home() {
                         ${formatNumber(marketData.marketCap)}
                       </div>
                     </div>
-
+                    {/* Market Rank Card */}
+                    <div className="bg-black/40 hidden md:block rounded-lg p-4 border border-gray-600/50">
+                      <div className="text-xs text-gray-400 mb-1">Market Rank</div>
+                      <div className="text-xl font-bold text-white">
+                        {marketData.marketCapRank}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 py-12">
@@ -679,10 +685,12 @@ export default function Home() {
                         <div className="text-xs text-gray-500">Posts (24h)</div>
                         <div className="text-lg font-bold text-white">{formatNumber(sentimentData.postsInLast24h)}</div>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Avg Engagement</div>
-                        <div className="text-lg font-bold text-white">{formatNumber(sentimentData.averageEngagement)}</div>
-                      </div>
+                      {sentimentData.averageEngagement > 0 && (
+                        <div>
+                          <div className="text-xs text-gray-500">Avg Engagement</div>
+                          <div className="text-lg font-bold text-white">{formatNumber(sentimentData.averageEngagement)}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
