@@ -242,7 +242,7 @@ async function generateAnalysis(marketData: MarketData[], sentimentData: Sentime
           name: market.name,
           price: market.current_price,
           priceChange24h: market.price_change_percentage_24h,
-          sentimentScore: sentiment.sentimentScore,
+          sentimentScore: sentiment.sentimentScore || 0.5,
           totalEngagement: sentiment.totalEngagement || 0,
           postsInLast24h: sentiment.postsInLast24h || 0,
           averageEngagement: sentiment.averageEngagement || 0,
@@ -382,6 +382,13 @@ async function callClaudeAI(prompt: string): Promise<string> {
     
     if (response.content && response.content[0] && 'text' in response.content[0]) {
       const responseText = response.content[0].text;
+      
+      // Validate response text is not empty
+      if (!responseText || responseText.trim().length === 0) {
+        console.error('❌ Claude API returned empty response text');
+        throw new Error('Empty response from Claude API');
+      }
+      
       console.log('📊 Claude AI Response preview:', responseText.substring(0, 200) + '...');
       return responseText;
     } else {
@@ -404,6 +411,12 @@ async function callClaudeAI(prompt: string): Promise<string> {
 // Parse Claude's JSON response
 function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
   try {
+    // Validate input
+    if (!claudeResponse || typeof claudeResponse !== 'string' || claudeResponse.trim().length === 0) {
+      console.warn('Empty or invalid Claude response, using fallback');
+      return generateFallbackAnalysis(null, null);
+    }
+
     // Extract JSON content from markdown code blocks if present
     let jsonContent = claudeResponse;
     
@@ -423,12 +436,27 @@ function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
       }
     }
     
+    // Validate JSON content before parsing
+    if (!jsonContent || jsonContent.trim().length === 0) {
+      console.warn('Empty JSON content extracted, using fallback');
+      return generateFallbackAnalysis(null, null);
+    }
+    
     const parsed = JSON.parse(jsonContent);
+    
+    // Validate parsed object has required fields
+    if (!parsed || typeof parsed !== 'object') {
+      console.warn('Invalid parsed JSON object, using fallback');
+      return generateFallbackAnalysis(null, null);
+    }
+    
     return {
       signal: parsed.signal || 'hold',
       confidence: parsed.confidence || 50,
       reasoning: parsed.reasoning || 'Analysis unavailable',
       targetPrice: parsed.targetPrice || 0,
+      nearTermTarget: parsed.nearTermTarget || 0,
+      mediumTermTarget: parsed.mediumTermTarget || 0,
       priceDirection: parsed.priceDirection || 'neutral',
       divergence: parsed.divergence || 'neutral',
       divergenceStrength: parsed.divergenceStrength || 50,
@@ -453,7 +481,7 @@ function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
 }
 
 // Fallback analysis when Claude fails
-function generateFallbackAnalysis(market: MarketData | null, sentiment: SentimentData | null): ParsedClaudeResponse {
+function generateFallbackAnalysis(market: MarketData | null, _sentiment: SentimentData | null): ParsedClaudeResponse {
   const currentPrice = market?.current_price || 0;
   
   return {

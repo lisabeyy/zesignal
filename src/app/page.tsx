@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Users, DollarSign, RefreshCw, Activity, Clock, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Users, RefreshCw, Activity, Clock, Calendar } from 'lucide-react';
 
 interface MarketData {
   price: number;
