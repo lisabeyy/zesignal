@@ -534,7 +534,7 @@ export default function Home() {
                     <BarChart3 className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
                     <h2 className="text-2xl font-bold">Market Overview</h2>
                   </div>
-                  <div className="text-xs text-gray-400 px-3 py-2 bg-blue-500/20 rounded-full border border-blue-500/30">
+                  <div className="text-xs hidden md:block text-gray-400 px-3 py-2 bg-blue-500/20 rounded-full border border-blue-500/30">
                     CoinGecko MCP • Real-time Data
                   </div>
                 </div>
@@ -574,13 +574,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Rank Card */}
-                    <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50">
-                      <div className="text-xs text-gray-400 mb-1">Market Rank</div>
-                      <div className="text-xl font-bold" style={{ color: '#D0FF80' }}>
-                        #{marketData.marketCapRank || 'N/A'}
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 py-12">
@@ -599,7 +592,7 @@ export default function Home() {
                   <Users className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
                   <h2 className="text-2xl font-bold">Social Sentiment Analysis</h2>
                 </div>
-                <div className="text-xs text-gray-400 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
+                <div className="text-xs hidden md:block text-gray-400 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
                   ZeDashboard MCP • AI-Powered
                 </div>
               </div>
@@ -889,7 +882,7 @@ export default function Home() {
             {/* Simple Technical Levels */}
             <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-6">
               <h5 className="text-sm font-semibold text-gray-400 mb-3">Technical Levels</h5>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Support</div>
                   <div className="text-lg font-bold text-red-400">
@@ -916,7 +909,7 @@ export default function Home() {
               <h5 className="text-sm font-semibold text-gray-400 mb-4">Price-Sentiment Divergence</h5>
 
               {/* Compact Divergence Metrics */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-600/30 text-center">
                   <div className="text-sm text-gray-400 mb-2">Divergence Type</div>
                   <div className={`font-semibold capitalize text-lg ${analysis.divergence.includes('aligned') ? 'text-lime-400' :
