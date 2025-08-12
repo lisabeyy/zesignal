@@ -1,17 +1,125 @@
-import { NextRequest, NextResponse } from 'next/server';
+
+import { NextResponse } from 'next/server';
 import { connectCG, getCoinData } from '@/lib/mcp-coingecko';
 import { connectZE, getSocialSentiment } from '@/lib/mcp-zedashboard';
 import Anthropic from '@anthropic-ai/sdk';
 
+// Type definitions
+interface MarketData {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+  price_change_percentage_24h: number;
+  market_cap: number;
+  market_cap_rank: number;
+  total_volume: number;
+}
+
+interface TrendingPost {
+  title: string;
+  engagement: number;
+  content: string;
+  platform: string;
+  date: string;
+  url: string;
+  id: string;
+  creator?: {
+    id: string;
+    name: string;
+    displayName: string;
+    followers: number;
+    avatar: string;
+    rank: number;
+    interactions24h: number;
+  } | null;
+}
+
+interface SentimentData {
+  coin: string;
+  success: boolean;
+  sentimentScore?: number;
+  totalEngagement?: number;
+  postsInLast24h?: number;
+  averageEngagement?: number;
+  trendingPosts?: TrendingPost[];
+  error?: string;
+}
+
+interface AnalysisSignal {
+  coin: string;
+  name: string;
+  price: number;
+  priceChange24h: number;
+  sentimentScore: number;
+  totalEngagement: number;
+  postsInLast24h: number;
+  averageEngagement: number;
+  trendingPosts: TrendingPost[];
+  signal: string;
+  confidence: number;
+  reasoning: string;
+  investorInsights: {
+    shortTerm: string;
+    mediumTerm: string;
+    keyRisks: string;
+    opportunities: string;
+    technicalLevels: {
+      support: number;
+      resistance: number;
+      keyLevel: number;
+    };
+  };
+  divergence: string;
+  priceDirection: string;
+  divergenceStrength: number;
+  riskLevel: string;
+}
+
+interface ParsedClaudeResponse {
+  signal: string;
+  confidence: number;
+  reasoning: string;
+  targetPrice: number;
+  nearTermTarget: number;
+  mediumTermTarget: number;
+  priceDirection: string;
+  divergence: string;
+  divergenceStrength: number;
+  riskLevel: string;
+  investorInsights: {
+    shortTerm: string;
+    mediumTerm: string;
+    keyRisks: string;
+    opportunities: string;
+    technicalLevels: {
+      support: number;
+      resistance: number;
+      keyLevel: number;
+    };
+  };
+}
+
+interface Analysis {
+  summary: string;
+  signals: AnalysisSignal[];
+  timestamp: string;
+  marketOverview: {
+    totalMarketCap: number;
+    totalVolume: number;
+    overallSentiment: string;
+    priceSentimentDivergence: string;
+  };
+}
+
 // NO Next.js caching - we'll implement simple in-memory caching for Claude only
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('🚀 Starting dual MCP analysis...');
     
     // Get the selected token from query parameters
-    const { searchParams } = new URL(request.url);
-    const selectedToken = searchParams.get('token') || 'bitcoin';
+    const selectedToken = 'bitcoin'; // Default token for now
     
     console.log(`🎯 Analyzing token: ${selectedToken}`);
     
@@ -79,10 +187,10 @@ export async function GET(request: NextRequest) {
 }
 
 // Claude AI-powered analysis function
-async function generateAnalysis(marketData: any[], sentimentData: any[]) {
-  const analysis = {
+async function generateAnalysis(marketData: MarketData[], sentimentData: SentimentData[]): Promise<Analysis> {
+  const analysis: Analysis = {
     summary: '',
-    signals: [] as any[],
+    signals: [],
     timestamp: new Date().toISOString(),
     marketOverview: {
       totalMarketCap: 0,
@@ -179,7 +287,7 @@ async function generateAnalysis(marketData: any[], sentimentData: any[]) {
 }
 
 // Generate Claude AI prompt for comprehensive analysis
-function generateClaudePrompt(market: any, sentiment: any): string {
+function generateClaudePrompt(market: MarketData, sentiment: SentimentData): string {
   return `You are a professional cryptocurrency analyst providing clear, actionable investment insights. Analyze the following data and provide a comprehensive trading analysis.
 
 MARKET DATA:
@@ -191,7 +299,7 @@ MARKET DATA:
 - Market Rank: #${market.market_cap_rank}
 
 SENTIMENT DATA:
-- Sentiment Score: ${Math.round(sentiment.sentimentScore * 100)}%
+- Sentiment Score: ${Math.round((sentiment.sentimentScore || 0.5) * 100)}%
 - Total Engagement: ${sentiment.totalEngagement?.toLocaleString() || 0}
 - Posts in Last 24h: ${sentiment.postsInLast24h || 0}
 - Average Engagement: ${sentiment.averageEngagement?.toLocaleString() || 0}
@@ -294,7 +402,7 @@ async function callClaudeAI(prompt: string): Promise<string> {
 }
 
 // Parse Claude's JSON response
-function parseClaudeResponse(claudeResponse: string): any {
+function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
   try {
     // Extract JSON content from markdown code blocks if present
     let jsonContent = claudeResponse;
@@ -345,7 +453,7 @@ function parseClaudeResponse(claudeResponse: string): any {
 }
 
 // Fallback analysis when Claude fails
-function generateFallbackAnalysis(market: any, sentiment: any): any {
+function generateFallbackAnalysis(market: MarketData | null, sentiment: SentimentData | null): ParsedClaudeResponse {
   const currentPrice = market?.current_price || 0;
   
   return {
@@ -374,7 +482,7 @@ function generateFallbackAnalysis(market: any, sentiment: any): any {
 }
 
 // Basic analysis for coins without sentiment data
-function generateBasicAnalysis(market: any): any {
+function generateBasicAnalysis(market: MarketData): ParsedClaudeResponse {
   const priceChange = market.price_change_percentage_24h;
   const currentPrice = market.current_price;
   let signal = 'hold';

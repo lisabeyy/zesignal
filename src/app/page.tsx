@@ -90,6 +90,68 @@ interface CryptoOption {
   sentimentKey: string;
 }
 
+// API response interfaces
+interface ApiMarketData {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+  price_change_percentage_24h: number;
+  total_volume: number;
+  market_cap: number;
+  market_cap_rank: number;
+}
+
+interface ApiSentimentData {
+  coin: string;
+  success: boolean;
+  sentimentScore?: number;
+  postsCount?: number;
+  summary?: string;
+  dataSource?: string;
+  totalEngagement?: number;
+  postsInLast24h?: number;
+  averageEngagement?: number;
+  topEngagement?: number;
+  trendingPosts?: TrendingPost[];
+  model?: string;
+  cacheStatus?: string;
+  error?: string;
+}
+
+interface ApiAnalysisSignal {
+  coin: string;
+  divergence?: string;
+  signal?: string;
+  confidence?: number;
+  reasoning?: string;
+  targetPrice?: number;
+  priceDirection?: string;
+  divergenceStrength?: number;
+  riskLevel?: string;
+  investorInsights?: {
+    shortTerm?: string;
+    mediumTerm?: string;
+    keyRisks?: string;
+    opportunities?: string;
+    technicalLevels?: {
+      support?: number;
+      resistance?: number;
+      keyLevel?: number;
+    };
+  };
+}
+
+interface ApiResponse {
+  success: boolean;
+  marketData: ApiMarketData[];
+  sentimentData: ApiSentimentData[];
+  analysis?: {
+    signals: ApiAnalysisSignal[];
+  };
+  error?: string;
+}
+
 export default function Home() {
   const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
   const [sentimentData, setSentimentData] = useState<SentimentData | null>(null);
@@ -170,7 +232,7 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result: ApiResponse = await response.json();
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch data');
@@ -179,8 +241,8 @@ export default function Home() {
 
       // Find the specific crypto data
       const crypto = cryptoOptions.find(c => c.id === cryptoId);
-      const coinMarketData = result.marketData.find((coin: any) => coin.id === cryptoId);
-      const coinSentimentData = result.sentimentData.find((sentiment: any) => sentiment.coin === cryptoId);
+      const coinMarketData = result.marketData.find((coin: ApiMarketData) => coin.id === cryptoId);
+      const coinSentimentData = result.sentimentData.find((sentiment: ApiSentimentData) => sentiment.coin === cryptoId);
 
 
       if (coinMarketData) {
@@ -199,7 +261,7 @@ export default function Home() {
         setSentimentData({
           score: coinSentimentData.sentimentScore || 0.5,
           volume: coinSentimentData.postsCount || 0,
-          trend: getSentimentTrend(coinSentimentData.sentimentScore),
+          trend: getSentimentTrend(coinSentimentData.sentimentScore || 0.5),
           summary: coinSentimentData.summary || 'No sentiment summary available',
           postsAnalyzed: coinSentimentData.postsCount || 0,
           dataSource: coinSentimentData.dataSource || "LunarCrush Social Sentiment",
@@ -225,7 +287,7 @@ export default function Home() {
       // Set the AI analysis
       if (result.analysis) {
         // Find the analysis signal using multiple matching strategies
-        const analysisSignal = result.analysis.signals.find((s: any) =>
+        const analysisSignal = result.analysis.signals.find((s: ApiAnalysisSignal) =>
           s.coin === crypto?.symbol || // Try exact symbol match (BTC, ETH, SOL, TARA)
           s.coin === crypto?.id || // Try ID match (bitcoin, ethereum, solana, taraxa)
           s.coin === cryptoId || // Try the selected crypto ID
@@ -240,7 +302,7 @@ export default function Home() {
           signal: analysisSignal?.signal || 'neutral',
           confidence: analysisSignal?.confidence || 50,
           sentimentScore: coinSentimentData?.sentimentScore || 0.5,
-          sentimentTrend: getSentimentTrend(coinSentimentData?.sentimentScore),
+          sentimentTrend: getSentimentTrend(coinSentimentData?.sentimentScore || 0.5),
           socialVolume: coinSentimentData?.postsCount || 0,
           recommendation: analysisSignal?.reasoning || 'No recommendation available',
           targetPrice: analysisSignal?.targetPrice || 0,
@@ -253,14 +315,14 @@ export default function Home() {
             keyRisks: analysisSignal?.investorInsights?.keyRisks || 'Data availability risk',
             opportunities: analysisSignal?.investorInsights?.opportunities || 'Wait for sentiment data',
             technicalLevels: {
-              support: analysisSignal?.investorInsights?.technicalLevels?.support || coinMarketData?.current_price * 0.95 || 0,
-              resistance: analysisSignal?.investorInsights?.technicalLevels?.resistance || coinMarketData?.current_price * 1.05 || 0,
+              support: analysisSignal?.investorInsights?.technicalLevels?.support || (coinMarketData?.current_price || 0) * 0.95,
+              resistance: analysisSignal?.investorInsights?.technicalLevels?.resistance || (coinMarketData?.current_price || 0) * 1.05,
               keyLevel: analysisSignal?.investorInsights?.technicalLevels?.keyLevel || coinMarketData?.current_price || 0
             }
           },
           analysis: {
             social: coinSentimentData?.summary?.substring(0, 200) + '...' || 'Social sentiment data processing...',
-            market: coinMarketData ? `Current price: $${coinMarketData.current_price?.toLocaleString()} (${coinMarketData.price_change_percentage_24h?.toFixed(2)}% 24h). Market cap rank: #${coinMarketData.market_cap_rank}. Trading volume: $${(coinMarketData.total_volume / 1e9).toFixed(2)}B` : 'Market data loading...',
+            market: coinMarketData ? `Current price: $${(coinMarketData.current_price || 0).toLocaleString()} (${(coinMarketData.price_change_percentage_24h || 0).toFixed(2)}% 24h). Market cap rank: #${coinMarketData.market_cap_rank || 'N/A'}. Trading volume: $${((coinMarketData.total_volume || 0) / 1e9).toFixed(2)}B` : 'Market data loading...',
             signal: analysisSignal?.signal || 'neutral',
             divergence: analysisSignal?.divergence || 'neutral'
           }

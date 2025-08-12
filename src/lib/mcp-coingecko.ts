@@ -1,6 +1,22 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
+// Type definitions for CoinGecko API responses
+interface CoinGeckoCoin {
+  id: string;
+  name: string;
+  symbol: string;
+  current_price: number;
+  market_cap: number;
+  market_cap_rank: number;
+  price_change_24h: number;
+  price_change_percentage_24h: number;
+  total_volume: number;
+  high_24h: number;
+  low_24h: number;
+  last_updated: string;
+}
+
 export interface CoinData {
   id: string;
   name: string;
@@ -101,7 +117,7 @@ export async function getCoinData(coinIds: string[]): Promise<CoinData[]> {
 
     const data = response.content[0]?.text ? JSON.parse(response.content[0].text) : [];
     
-    return data.map((coin: any) => ({
+    return data.map((coin: CoinGeckoCoin) => ({
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol.toUpperCase(),
@@ -146,7 +162,7 @@ export async function searchCoins(query: string): Promise<CoinSearchResult[]> {
 
     const data = response.content[0]?.text ? JSON.parse(response.content[0].text) : [];
     
-    return data.map((coin: any) => ({
+    return data.map((coin: CoinGeckoCoin) => ({
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol.toUpperCase(),

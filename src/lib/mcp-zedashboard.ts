@@ -1,6 +1,39 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
+// Type definitions for ZeDashboard API responses
+interface ZeDashboardPost {
+  title: string;
+  interactions?: number;
+  engagement?: number;
+  platform: string;
+  date: string;
+  url: string;
+  id: string;
+  creator?: {
+    id: string;
+    name: string;
+    displayName: string;
+    followers: number;
+    avatar: string;
+    rank: number;
+    interactions24h: number;
+  } | null;
+}
+
+interface ZeDashboardJsonData {
+  trendingPosts?: ZeDashboardPost[];
+  sentimentScore?: number;
+  postsCount?: number;
+  engagement?: number;
+  analytics?: {
+    posts24h?: number;
+    totalEngagement?: number;
+    averageEngagement?: number;
+    topEngagement?: number;
+  };
+}
+
 export interface ZeDashboardSentimentResponse {
   success: boolean;
   topic: string;
@@ -167,7 +200,7 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
       postsInLast24h: data.postsInLast24h || data.analytics?.posts24h || data.postsCount || 0,
       averageEngagement: data.averageEngagement || data.analytics?.averageEngagement || 0,
       topEngagement: data.topEngagement || data.analytics?.topEngagement || 0,
-      trendingPosts: (data.trendingPosts || []).map((post: any) => ({
+      trendingPosts: (data.trendingPosts || []).map((post: ZeDashboardPost) => ({
         title: post.title || '',
         engagement: post.interactions || post.engagement || 0,
         content: post.title || '', // Use title as content for now
@@ -230,6 +263,7 @@ export async function getHealthStatus(): Promise<{ status: string; timestamp: nu
       server: 'https://mcp-server.looftaxyz.workers.dev/sse'
     };
   } catch (error) {
+    console.error('❌ Error fetching health status:', error);
     return {
       status: 'error',
       timestamp: Date.now(),
@@ -246,7 +280,7 @@ export function isZEConnected(): boolean {
 function parseMarkdownResponse(markdownText: string) {
   console.log('🔍 Starting markdown parsing...');
   
-  const data: any = {
+  const data: ZeDashboardSentimentResponse = {
     success: true,
     topic: '',
     summary: '',
@@ -274,12 +308,12 @@ function parseMarkdownResponse(markdownText: string) {
     if (jsonStart !== -1 && jsonEnd !== -1) {
       const jsonText = rawApiSection.substring(jsonStart + 7, jsonEnd);
       try {
-        const jsonData = JSON.parse(jsonText);
+        const jsonData: ZeDashboardJsonData = JSON.parse(jsonText);
         console.log('✅ Successfully parsed JSON from Raw API Response section');
         
         // Use the JSON data for trending posts and other fields
         if (jsonData.trendingPosts && Array.isArray(jsonData.trendingPosts)) {
-          data.trendingPosts = jsonData.trendingPosts.map((post: any) => ({
+          data.trendingPosts = jsonData.trendingPosts.map((post: ZeDashboardPost) => ({
             title: post.title || '',
             engagement: post.interactions || post.engagement || 0,
             content: post.title || '',
@@ -317,8 +351,8 @@ function parseMarkdownResponse(markdownText: string) {
           });
         }
         
-      } catch (jsonError) {
-        console.log('❌ Failed to parse JSON from Raw API Response:', jsonError);
+      } catch {
+        console.log('❌ Failed to parse JSON from Raw API Response');
       }
     }
   }
