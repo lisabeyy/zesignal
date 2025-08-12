@@ -28,6 +28,15 @@ export interface TrendingPost {
   date: string;
   url: string;
   id: string;
+  creator?: {
+    id: string;
+    name: string;
+    displayName: string;
+    followers: number;
+    avatar: string;
+    rank: number;
+    interactions24h: number;
+  } | null;
 }
 
 // Create a dedicated ZeDashboard MCP client instance
@@ -165,7 +174,8 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
         platform: post.platform || 'unknown',
         date: post.date || '',
         url: post.url || '',
-        id: post.id || ''
+        id: post.id || '',
+        creator: post.creator || null
       })),
       model: data.model || "claude-sonnet-4-20250514",
       cacheStatus: data.cacheStatus || "Fresh Data"
@@ -276,7 +286,8 @@ function parseMarkdownResponse(markdownText: string) {
             platform: post.platform || 'unknown',
             date: post.date || '',
             url: post.url || '',
-            id: post.id || ''
+            id: post.id || '',
+            creator: post.creator || null
           }));
           console.log('✅ Extracted trending posts from JSON:', data.trendingPosts.length);
         }
