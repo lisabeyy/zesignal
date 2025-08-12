@@ -226,7 +226,7 @@ async function generateAnalysis(marketData: MarketData[], sentimentData: Sentime
           name: market.name,
           price: market.current_price,
           priceChange24h: market.price_change_percentage_24h,
-          sentimentScore: sentiment.sentimentScore,
+          sentimentScore: sentiment.sentimentScore || 0,
           totalEngagement: sentiment.totalEngagement || 0,
           postsInLast24h: sentiment.postsInLast24h || 0,
           averageEngagement: sentiment.averageEngagement || 0,
