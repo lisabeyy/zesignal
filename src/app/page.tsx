@@ -20,6 +20,24 @@ interface SentimentData {
   summary: string;
   postsAnalyzed: number;
   dataSource: string;
+  // New fields for enhanced response
+  totalEngagement: number;
+  postsInLast24h: number;
+  averageEngagement: number;
+  topEngagement: number;
+  trendingPosts: TrendingPost[];
+  model: string;
+  cacheStatus: string;
+}
+
+interface TrendingPost {
+  title: string;
+  engagement: number;
+  content: string;
+  platform: string;
+  date: string;
+  url: string;
+  id: string;
 }
 
 interface AnalysisData {
@@ -73,10 +91,13 @@ export default function Home() {
     setAnalysis(null);
 
     try {
-      console.log('Fetching data for:', cryptoId);
+      console.log('🎯 Fetching data for:', cryptoId);
 
       // Call the analysis API which connects to both MCPs
-      const response = await fetch('/api/analysis');
+      const apiUrl = `/api/analysis?token=${cryptoId}`;
+      console.log('📡 Calling API:', apiUrl);
+
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -93,6 +114,27 @@ export default function Home() {
       const crypto = cryptoOptions.find(c => c.id === cryptoId);
       const coinMarketData = result.marketData.find((coin: any) => coin.id === cryptoId);
       const coinSentimentData = result.sentimentData.find((sentiment: any) => sentiment.coin === cryptoId);
+
+      console.log('🔍 Found data:', {
+        cryptoId,
+        coinMarketData: coinMarketData ? 'Found' : 'Not found',
+        coinSentimentData: coinSentimentData ? 'Found' : 'Not found',
+        sentimentDataLength: result.sentimentData?.length || 0
+      });
+
+      if (coinSentimentData) {
+        console.log('📊 Sentiment data details:', {
+          success: coinSentimentData.success,
+          topic: coinSentimentData.topic,
+          postsCount: coinSentimentData.postsCount,
+          sentimentScore: coinSentimentData.sentimentScore,
+          totalEngagement: coinSentimentData.totalEngagement,
+          trendingPostsCount: coinSentimentData.trendingPosts?.length || 0
+        });
+
+        // Log the full sentiment data object
+        console.log('🔍 Full sentiment data object:', coinSentimentData);
+      }
 
       if (coinMarketData) {
         setMarketData({
@@ -113,8 +155,22 @@ export default function Home() {
           trend: getSentimentTrend(coinSentimentData.sentimentScore),
           summary: coinSentimentData.summary || 'No sentiment summary available',
           postsAnalyzed: coinSentimentData.postsCount || 0,
-          dataSource: coinSentimentData.dataSource || "ZeDashboard Social Sentiment",
+          dataSource: coinSentimentData.dataSource || "LunarCrush Social Sentiment",
+          totalEngagement: coinSentimentData.totalEngagement || 0,
+          postsInLast24h: coinSentimentData.postsInLast24h || 0,
+          averageEngagement: coinSentimentData.averageEngagement || 0,
+          topEngagement: coinSentimentData.topEngagement || 0,
+          trendingPosts: coinSentimentData.trendingPosts || [],
+          model: coinSentimentData.model || "claude-sonnet-4-20250514",
+          cacheStatus: coinSentimentData.cacheStatus || "Fresh Data"
         });
+      } else if (coinSentimentData && !coinSentimentData.success) {
+        // Show error message for failed sentiment fetch
+        setError(`Sentiment analysis failed for ${cryptoId}: ${coinSentimentData.error || 'Unknown error'}`);
+        setSentimentData(null);
+      } else {
+        // No sentiment data available
+        setSentimentData(null);
       }
 
       // Set the AI analysis
@@ -170,6 +226,17 @@ export default function Home() {
         key: index
       };
     }).filter(Boolean);
+  };
+
+  const cleanSummaryText = (text: string) => {
+    if (!text) return '';
+    // Remove markdown headers and clean up the text
+    return text
+      .replace(/^#{1,6}\s*.*$/gm, '') // Remove header lines
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
+      .replace(/\n\s*\n/g, '\n') // Remove extra blank lines
+      .trim();
   };
 
   useEffect(() => {
@@ -355,7 +422,7 @@ export default function Home() {
                   <Users className="w-6 h-6 mr-2" style={{ color: '#D0FF80' }} />
                   <h3 className="text-xl font-semibold">Social Sentiment (Twitter)</h3>
                 </div>
-                <div className="text-xs text-gray-400 px-2 py-1 bg-lime-500/20 rounded">ZeDashboard MCP</div>
+                <div className="text-xs text-gray-400 px-2 py-1 bg-lime-500/20 rounded">LunarCrush MCP</div>
               </div>
 
               {sentimentData ? (
@@ -373,10 +440,22 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Sentiment Summary */}
+                  {sentimentData.summary && (
+                    <div className="mt-3 p-2 bg-gray-800/30 rounded border border-gray-700">
+                      <div className="text-xs text-gray-400 mb-1">Overall Sentiment</div>
+                      <div className="text-sm font-semibold text-lime-400">
+                        {sentimentData.score > 0.7 ? 'BULLISH' :
+                          sentimentData.score < 0.4 ? 'BEARISH' :
+                            sentimentData.score > 0.6 ? 'MIXED BULLISH' : 'NEUTRAL'}
+                      </div>
+                    </div>
+                  )}
+
                   {sentimentData.volume > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Social Volume</span>
-                      <span className="font-semibold">{formatNumber(sentimentData.volume)}</span>
+                      <span className="font-semibold">{formatNumber(sentimentData.volume)} posts</span>
                     </div>
                   )}
 
@@ -398,7 +477,7 @@ export default function Home() {
                       {!expandedAnalysis ? (
                         <>
                           <p className="text-base text-gray-300 leading-relaxed">
-                            {sentimentData.summary.substring(0, 400)}...
+                            {cleanSummaryText(sentimentData.summary).substring(0, 400)}...
                           </p>
                           <button
                             className="text-base hover:text-lime-300 mt-4 cursor-pointer font-medium"
@@ -411,7 +490,7 @@ export default function Home() {
                       ) : (
                         <>
                           <div className="max-h-96 overflow-y-auto max-w-4xl">
-                            {formatSentimentText(sentimentData.summary).map((line) => (
+                            {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => (
                               <div key={line?.key} className={`mb-4 ${line?.isBold ? 'font-bold text-white text-lg' : 'text-gray-300 text-base'} leading-relaxed`}>
                                 {line?.text}
                               </div>
@@ -428,6 +507,110 @@ export default function Home() {
                       )}
                     </div>
                   )}
+
+                  {/* Enhanced Metrics Section */}
+                  {(sentimentData.totalEngagement > 0 || sentimentData.postsInLast24h > 0) && (
+                    <div className="mt-4 p-3 bg-black/50 rounded-lg border border-gray-800">
+                      <h5 className="text-xs font-semibold text-gray-400 mb-3">ENGAGEMENT METRICS</h5>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {sentimentData.totalEngagement > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Total Engagement:</span>
+                            <span className="font-semibold text-lime-400">{formatNumber(sentimentData.totalEngagement)}</span>
+                          </div>
+                        )}
+                        {sentimentData.postsInLast24h > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Posts (24h):</span>
+                            <span className="font-semibold">{sentimentData.postsInLast24h}</span>
+                          </div>
+                        )}
+                        {sentimentData.averageEngagement > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Avg Engagement:</span>
+                            <span className="font-semibold">{formatNumber(sentimentData.averageEngagement)}</span>
+                          </div>
+                        )}
+                        {sentimentData.topEngagement > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Top Engagement:</span>
+                            <span className="font-semibold text-orange-400">{formatNumber(sentimentData.topEngagement)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trending Posts Section */}
+                  {sentimentData.trendingPosts && sentimentData.trendingPosts.length > 0 && (
+                    <div className="mt-4 p-3 bg-black/50 rounded-lg border border-gray-800">
+                      <h5 className="text-xs font-semibold text-gray-400 mb-3">🚀 TRENDING POSTS</h5>
+                      <div className="space-y-3">
+                        {sentimentData.trendingPosts.slice(0, 3).map((post, index) => (
+                          <div key={index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <h6 className="font-semibold text-sm text-white leading-tight flex-1 mr-3">
+                                {post.title.length > 100 ? `${post.title.substring(0, 100)}...` : post.title}
+                              </h6>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs text-lime-400 font-medium">
+                                  {formatNumber(post.engagement)} engagement
+                                </span>
+                                {post.url && (
+                                  <a
+                                    href={post.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                                    title="View on X (Twitter)"
+                                  >
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                    </svg>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-xs text-gray-500">
+                              <div className="flex items-center space-x-2">
+                                {post.platform && (
+                                  <span className="px-2 py-1 bg-gray-700/50 rounded flex items-center space-x-1">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                    </svg>
+                                    <span>{post.platform}</span>
+                                  </span>
+                                )}
+                                {post.date && (
+                                  <span>{new Date(post.date).toLocaleDateString()}</span>
+                                )}
+                              </div>
+                              {post.url && (
+                                <span className="text-blue-400 text-xs">Click X icon to view</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="text-xs text-gray-500 text-center italic">
+                          Showing top {Math.min(sentimentData.trendingPosts.length, 3)} trending posts
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Data Source Info */}
+                  <div className="mt-4 p-2 bg-gray-800/30 rounded border border-gray-700">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Model: {sentimentData.model}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${sentimentData.cacheStatus === 'Fresh Data'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                        {sentimentData.cacheStatus}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-8">
@@ -474,6 +657,28 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Enhanced Metrics Display */}
+            {sentimentData && (sentimentData.totalEngagement > 0 || sentimentData.postsInLast24h > 0) && (
+              <div className="grid md:grid-cols-4 gap-4 mb-6 p-4 bg-black/30 rounded-lg border border-gray-700">
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-1">Total Engagement</div>
+                  <div className="text-lg font-bold text-lime-400">{formatNumber(sentimentData.totalEngagement)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-1">Posts (24h)</div>
+                  <div className="text-lg font-bold text-blue-400">{sentimentData.postsInLast24h}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-1">Avg Engagement</div>
+                  <div className="text-lg font-bold text-orange-400">{formatNumber(sentimentData.averageEngagement)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-400 mb-1">Top Engagement</div>
+                  <div className="text-lg font-bold text-purple-400">{formatNumber(sentimentData.topEngagement)}</div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-black/50 rounded-lg p-5 border border-gray-800 mb-6">
               <h4 className="font-semibold mb-3 flex items-center" style={{ color: '#D0FF80' }}>
                 <AlertTriangle className="w-4 h-4 mr-2" />
@@ -508,7 +713,7 @@ export default function Home() {
           <div className="flex items-center justify-center space-x-4">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#D0FF80' }}></div>
-              <span>ZeDashboard MCP</span>
+              <span>LunarCrush MCP</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
