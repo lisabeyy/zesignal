@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crypto Market Cap Comparator",
-  description: "Compare cryptocurrency market caps and see potential price projections",
+  title: "Signal for Crypto",
+  description: "See the signal for a token and compare sentiment with real market data",
 };
 
 export default function RootLayout({

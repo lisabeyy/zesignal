@@ -1,103 +1,145 @@
-# 🚀 GeckoCap - MarketCap Comparator
+# ZeSignal - AI-Powered Cryptocurrency Analysis Platform
 
-A beautiful, modern web application that helps you compare cryptocurrency market capitalizations and visualize potential price projections. Built with Next.js and powered by CoinGecko's MCP (Model Context Protocol) Server.
+A comprehensive cryptocurrency analysis platform that provides real-time market data, social sentiment analysis, and AI-powered trading insights. Built with Next.js and powered by multiple MCP (Model Context Protocol) servers and Claude AI.
 
+## 🚀 Features
 
-![GeckoCap Preview](https://img.shields.io/badge/Status-Live-brightgreen)
-![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC)
+### **Real-Time Market Data**
+- Live cryptocurrency prices, market cap, and trading volume
+- 24-hour price change tracking
+- Market cap rankings and volume analysis
+- Support for Bitcoin, Ethereum, Solana, and Taraxa
 
-![GeckoCap App Screenshot](https://lkrqcaxgingqjswmtdkw.supabase.co/storage/v1/object/public/images/Random/screencap-gecko.webp)
+### **Social Sentiment Analysis**
+- Real-time social media sentiment scoring
+- Engagement metrics and trending posts analysis
+- Community sentiment trends and FOMO detection
+- Powered by ZeDashboard MCP for social data
 
-## 🚀 Getting Started
+### **AI-Powered Trading Analysis**
+- Claude AI-generated trading signals and recommendations
+- Price-sentiment divergence analysis
+- Technical support and resistance levels
+- Risk assessment and opportunity identification
+- Short-term and medium-term price targets
 
-## 📁 Project Structure
+### **Advanced Analytics**
+- Price-sentiment divergence strength scoring
+- Investor insights for different time horizons
+- Key risks and opportunities analysis
+- Technical level calculations based on current prices
 
-```
-├── src/
-│   ├── app/                    # Next.js 13+ app router
-│   │   ├── api/               # API routes for MCP integration
-│   │   ├── globals.css        # Global styles
-│   │   ├── layout.tsx         # Root layout
-│   │   └── page.tsx           # Main application page
-│   ├── components/            # Reusable components
-│   │   └── AnimatedBackground.tsx  # WebGL background
-│   └── lib/                   # Utilities and configurations
-│       └── mcp-client.ts      # MCP client implementation
-├── public/                    # Static assets
-├── tailwind.config.ts         # Tailwind configuration
-└── README.md                  # You are here!
-```
+## 🛠️ Technology Stack
 
+- **Frontend**: Next.js 14, React, TypeScript
+- **Styling**: Tailwind CSS with modern UI components
+- **AI Analysis**: Anthropic Claude AI (Claude Sonnet 4)
+- **Data Sources**: 
+  - CoinGecko MCP for market data
+  - ZeDashboard MCP for social sentiment
+- **Icons**: Lucide React for beautiful, consistent icons
 
-## 📖 How It Works
+## 🔌 MCP Integration
 
-### 1. **Search Phase**
-- User searches for any cryptocurrency
-- App connects to CoinGecko MCP server
-- Results are sorted by market cap and displayed
+The platform leverages Model Context Protocol (MCP) servers to connect to external data sources:
 
-### 2. **Selection Phase** 
-- User selects a token from search results
-- App fetches detailed token information
-- Similar tokens are identified using smart market cap ranges:
-  - **Large Cap** (>$10B): Compared with tokens >$5B
-  - **Mid Cap** ($1B-$10B): Compared with tokens $500M-$50B  
-  - **Small Cap** ($100M-$1B): Compared with tokens $50M-$10B
-  - **Micro Cap** (<$100M): Compared with anything larger
+- **CoinGecko MCP**: Provides real-time cryptocurrency market data
+- **ZeDashboard MCP**: Delivers social sentiment and engagement metrics
 
-## 🔧 Integration
+## 🤖 AI Analysis Features
 
-The app uses CoinGecko's MCP (Model Context Protocol) server:
+### **Trading Signals**
+- Strong Buy, Buy, Hold, Sell, Strong Sell recommendations
+- Confidence scoring (0-100%)
+- Clear reasoning for each recommendation
 
-```typescript
-// Example MCP client usage
-import { mcpClient } from '@/lib/mcp-client';
+### **Price Analysis**
+- Near-term targets (24-48 hours)
+- Medium-term projections (1-2 weeks)
+- Technical support and resistance levels
+- Price direction indicators (bullish/bearish/neutral)
 
-// Search for coins
-const results = await mcpClient.searchCoins('bitcoin');
+### **Risk Assessment**
+- Risk level classification (Low/Medium/High)
+- Specific risk identification
+- Opportunity analysis
+- Market sentiment correlation
 
-// Get coin data  
-const coinData = await mcpClient.getCoinData(['bitcoin']);
+## 📱 User Experience
 
-// Get trending coins
-const trending = await mcpClient.getTrendingCoins();
-```
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Real-Time Updates**: Live data refresh without page reloads
+- **Interactive UI**: Hover effects, smooth transitions, and modern aesthetics
+- **Token Selection**: Easy switching between different cryptocurrencies
+- **Shareable Links**: URL parameters for direct token access
+
+## 🚦 Getting Started
 
 ### Prerequisites
-
 - Node.js 18+ 
 - npm or yarn
-- CoinGecko MCP Server access
+- Anthropic API key for Claude AI
 
 ### Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd zesignal
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mdzor/geckocap.git
-   cd geckocap
-   ```
+# Install dependencies
+npm install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+# Set up environment variables
+cp .env.example .env.local
+# Add your ANTHROPIC_API_KEY to .env.local
 
-4. **Run the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+# Run the development server
+npm run dev
 ```
+
+### Environment Variables
+```bash
+ANTHROPIC_API_KEY=sk-ant-... # Your Claude AI API key
+```
+
+## 🔧 API Endpoints
+
+- `GET /api/analysis?token={cryptocurrency}` - Comprehensive analysis endpoint
+- Integrates CoinGecko and ZeDashboard MCP servers
+- Returns market data, sentiment analysis, and AI insights
+
+## 📊 Data Flow
+
+1. **User Selection**: Choose cryptocurrency from supported tokens
+2. **MCP Data Fetch**: Retrieve market data and social sentiment
+3. **AI Analysis**: Claude AI processes data and generates insights
+4. **UI Rendering**: Display comprehensive analysis with modern UI
+5. **Real-Time Updates**: Continuous data refresh and analysis
+
+## 🎯 Use Cases
+
+- **Retail Investors**: Get AI-powered trading insights and risk assessment
+- **Crypto Analysts**: Access comprehensive market and sentiment data
+- **Traders**: Identify price-sentiment divergences and trading opportunities
+- **Researchers**: Study cryptocurrency market dynamics and social sentiment
+
+## 🔮 Future Enhancements
+
+- Additional cryptocurrency support
+- Advanced charting and technical analysis
+- Portfolio tracking and performance metrics
+- Mobile app development
+- Enhanced AI models and analysis capabilities
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-**Built with ❤️ for the crypto community**
+**Built with ❤️ using Next.js, MCP, and Claude AI**
 

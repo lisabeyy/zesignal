@@ -78,6 +78,10 @@ export const zeClient = new Client(
   { capabilities: {} }
 );
 
+console.log('🔧 ZeDashboard MCP client created:', {
+  hasTransport: !!zeClient.transport
+});
+
 let zeTransport: SSEClientTransport | null = null;
 let isConnected = false;
 
@@ -97,13 +101,33 @@ export async function connectZE() {
     }
     
     // Create new transport and connect
-    zeTransport = new SSEClientTransport(new URL('https://mcp-server.looftaxyz.workers.dev/sse'));
+    const serverUrl = 'https://mcp-server.looftaxyz.workers.dev/sse';
+    console.log('🌐 Connecting to MCP server URL:', serverUrl);
+    
+    // Test if the server is reachable first
+    try {
+      const testResponse = await fetch(serverUrl.replace('/sse', '/health'), { 
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      console.log('🌐 Server health check response:', testResponse.status, testResponse.statusText);
+    } catch (fetchError) {
+      console.warn('🌐 Server health check failed (this might be normal):', fetchError);
+    }
+    
+    zeTransport = new SSEClientTransport(new URL(serverUrl));
+    console.log('🔌 Transport created, attempting connection...');
     await zeClient.connect(zeTransport);
     
     isConnected = true;
     console.log('✅ Connected to ZeDashboard MCP server');
   } catch (error) {
     console.error('❌ Failed to connect to ZeDashboard MCP server:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
     isConnected = false;
     throw error;
   }
@@ -123,12 +147,16 @@ export async function disconnectZE() {
 }
 
 export async function getSocialSentiment(topic: string): Promise<ZeDashboardSentimentResponse> {
-  if (!isConnected) {
-    await connectZE();
-  }
-  
   try {
+    if (!isConnected) {
+      console.log('🔌 Not connected, attempting to connect...');
+      await connectZE();
+    }
+    
     console.log(`🚀 Calling get_social_sentiment for topic: ${topic}`);
+    console.log('🔍 Current connection status:', isConnected);
+    console.log('🔍 Client state:', zeClient ? 'Client exists' : 'No client');
+    console.log('🔍 Transport state:', zeTransport ? 'Transport exists' : 'No transport');
     
     const response = await zeClient.callTool({
       name: 'get_social_sentiment',
@@ -255,21 +283,38 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
 export async function getHealthStatus(): Promise<{ status: string; timestamp: number; server: string }> {
   try {
     if (!isConnected) {
+      console.log('🔍 Health check: Not connected, attempting connection...');
       await connectZE();
     }
-    return {
-      status: isConnected ? 'connected' : 'disconnected',
-      timestamp: Date.now(),
-      server: 'https://mcp-server.looftaxyz.workers.dev/sse'
-    };
-  } catch (error) {
-    console.error('❌ Error fetching health status:', error);
-    return {
-      status: 'error',
-      timestamp: Date.now(),
-      server: 'https://mcp-server.looftaxyz.workers.dev/sse'
-    };
-  }
+    
+    // Test the connection with a simple call
+    try {
+      await zeClient.callTool({
+        name: 'get_social_sentiment',
+        arguments: { topic: 'test' }
+      });
+      
+      return {
+        status: 'connected',
+        timestamp: Date.now(),
+        server: 'https://mcp-server.looftaxyz.workers.dev/sse'
+      };
+    } catch (callError) {
+      console.warn('Health check: Tool call failed:', callError);
+      return {
+        status: 'connected_but_tool_failed',
+        timestamp: Date.now(),
+        server: 'https://mcp-server.looftaxyz.workers.dev/sse'
+      };
+    }
+      } catch (error) {
+      console.error('Health check: Connection failed:', error);
+      return {
+        status: 'error',
+        timestamp: Date.now(),
+        server: 'https://mcp-server.looftaxyz.workers.dev/sse'
+      };
+    }
 }
 
 export function isZEConnected(): boolean {

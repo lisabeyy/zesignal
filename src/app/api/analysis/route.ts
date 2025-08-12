@@ -114,12 +114,13 @@ interface Analysis {
 
 // NO Next.js caching - we'll implement simple in-memory caching for Claude only
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     console.log('🚀 Starting dual MCP analysis...');
     
     // Get the selected token from query parameters
-    const selectedToken = 'bitcoin'; // Default token for now
+    const { searchParams } = new URL(request.url);
+    const selectedToken = searchParams.get('token') || 'bitcoin';
     
     console.log(`🎯 Analyzing token: ${selectedToken}`);
     
