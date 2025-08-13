@@ -610,6 +610,7 @@ export default function Home() {
                 onClick={() => fetchData(selectedCrypto)}
                 disabled={loading}
                 className="flex items-center space-x-2 px-4 py-2 bg-lime-500/20 hover:bg-lime-500/30 rounded-lg border border-lime-500/30 transition-all disabled:opacity-50"
+                title="Refresh data (respects 8h cache)"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} style={{ color: '#D0FF80' }} />
                 <span className="text-sm hidden sm:inline" style={{ color: '#D0FF80' }}>Refresh</span>
@@ -839,6 +840,8 @@ export default function Home() {
                 <div className="text-xs hidden md:block text-lime-300 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
                   ZeDashboard MCP • AI-Powered
                 </div>
+
+
               </div>
 
               {sentimentData ? (

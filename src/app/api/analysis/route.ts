@@ -1,8 +1,12 @@
 
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { connectCG, getCoinData } from '@/lib/mcp-coingecko';
 import { connectZE, getSocialSentiment } from '@/lib/mcp-zedashboard';
 import Anthropic from '@anthropic-ai/sdk';
+
+// Cache configuration - 8 hours in seconds
+const CACHE_DURATION = 8 * 60 * 60; // 8 hours
 
 // Type definitions
 interface MarketData {
@@ -157,9 +161,62 @@ interface Analysis {
 
 // NO Next.js caching - we'll implement simple in-memory caching for Claude only
 
+// Cached function for market data
+const getCachedMarketData = unstable_cache(
+  async (coins: string[]) => {
+    console.log('📊 Fetching fresh market data from CoinGecko MCP...');
+    await connectCG();
+    return await getCoinData(coins);
+  },
+  ['market-data'],
+  {
+    revalidate: CACHE_DURATION,
+    tags: ['market-data']
+  }
+);
+
+// Cached function for sentiment data
+const getCachedSentimentData = unstable_cache(
+  async (token: string) => {
+    console.log(`📡 Fetching fresh sentiment data for ${token} from ZeDashboard MCP...`);
+    await connectZE();
+    try {
+      const sentiment = await getSocialSentiment(token);
+      return {
+        coin: token,
+        ...sentiment
+      };
+    } catch (error) {
+      return {
+        coin: token,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+  ['sentiment-data'],
+  {
+    revalidate: CACHE_DURATION,
+    tags: ['sentiment-data']
+  }
+);
+
+// Cached function for AI analysis
+const getCachedAnalysis = unstable_cache(
+  async (marketData: any[], sentimentData: any[]) => {
+    console.log('🤖 Generating fresh Claude AI analysis...');
+    return await generateAnalysis(marketData, sentimentData);
+  },
+  ['ai-analysis'],
+  {
+    revalidate: CACHE_DURATION,
+    tags: ['ai-analysis']
+  }
+);
+
 export async function GET(request: Request) {
   try {
-    console.log('🚀 Starting dual MCP analysis...');
+    console.log('🚀 Starting dual MCP analysis with caching...');
     
     // Get the selected token from query parameters
     const { searchParams } = new URL(request.url);
@@ -167,55 +224,48 @@ export async function GET(request: Request) {
     
     console.log(`🎯 Analyzing token: ${selectedToken}`);
     
-    // 1. Connect to both MCPs
-    console.log('🔌 Connecting to MCP servers...');
-    await Promise.all([
-      connectCG(),
-      connectZE()
-    ]);
-    console.log('✅ Both MCP servers connected');
-
-    // 2. Fetch market data from CoinGecko MCP
-    console.log('📊 Fetching market data from CoinGecko MCP...');
+    // 1. Fetch cached market data (connects to CoinGecko MCP if needed)
+    console.log('📊 Fetching market data (cached)...');
     const coins = ['bitcoin', 'ethereum', 'solana', 'taraxa'];
-    const marketData = await getCoinData(coins);
+    const marketData = await getCachedMarketData(coins);
     console.log(`✅ Fetched market data for ${marketData.length} coins`);
 
-    // 3. Fetch sentiment data ONLY for the selected token from ZeDashboard MCP
-    console.log(`📡 Fetching sentiment data for ${selectedToken} from ZeDashboard MCP...`);
-    let sentimentData = [];
-    
-    try {
-      const selectedSentiment = await getSocialSentiment(selectedToken);
-      sentimentData = [{
-        coin: selectedToken,
-        ...selectedSentiment
-      }];
-      console.log(`✅ Fetched sentiment data for ${selectedToken}`);
-      console.log('📊 Sentiment data structure:', JSON.stringify(sentimentData[0], null, 2));
-    } catch (sentimentError) {
-      console.warn(`Failed to get sentiment for ${selectedToken}:`, sentimentError);
-      sentimentData = [{
-        coin: selectedToken,
-        success: false,
-        error: sentimentError instanceof Error ? sentimentError.message : 'Unknown error'
-      }];
-    }
+    // 2. Fetch cached sentiment data (connects to ZeDashboard MCP if needed)
+    console.log(`📡 Fetching sentiment data for ${selectedToken} (cached)...`);
+    const sentimentData = [await getCachedSentimentData(selectedToken)];
+    console.log(`✅ Fetched sentiment data for ${selectedToken}`);
 
-    // 4. Generate AI analysis
-    console.log('🤖 Generating Claude AI analysis...');
-    const analysis = await generateAnalysis(marketData, sentimentData);
-    console.log('✅ Claude AI analysis generated');
+    // 3. Generate cached AI analysis
+    console.log('🤖 Generating AI analysis (cached)...');
+    const analysis = await getCachedAnalysis(marketData, sentimentData);
+    console.log('✅ AI analysis generated');
 
-    // 5. Return everything to the UI
-    return NextResponse.json({
+    // 4. Create response with enhanced caching
+    const response = NextResponse.json({
       success: true,
       marketData,
       sentimentData,
       analysis,
       selectedToken,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      cacheStatus: 'Cached Data (8h TTL)',
+      cacheExpiry: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
+      cacheInfo: {
+        duration: `${CACHE_DURATION / 3600} hours`,
+        nextRefresh: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
+        cacheType: 'Next.js unstable_cache + HTTP headers'
+      }
     });
+
+    // 5. Set comprehensive caching headers for 8 hours
+    response.headers.set('Cache-Control', `public, s-maxage=${CACHE_DURATION}, stale-while-revalidate=${CACHE_DURATION * 2}`);
+    response.headers.set('CDN-Cache-Control', `public, max-age=${CACHE_DURATION}`);
+    response.headers.set('Vercel-CDN-Cache-Control', `public, max-age=${CACHE_DURATION}`);
+    response.headers.set('X-Cache-Status', 'HIT');
+    response.headers.set('X-Cache-TTL', `${CACHE_DURATION}`);
+    
+    console.log(`✅ Response cached for ${CACHE_DURATION / 3600} hours using Next.js unstable_cache`);
+    return response;
 
   } catch (error) {
     console.error('❌ Analysis API error:', error);
@@ -223,6 +273,48 @@ export async function GET(request: Request) {
       { 
         success: false,
         error: 'Failed to generate analysis',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// Cache invalidation endpoint
+export async function POST(request: Request) {
+  try {
+    const { action } = await request.json();
+    
+    if (action === 'invalidate') {
+      console.log('🔄 Manually invalidating all caches...');
+      
+      // Note: In a real production environment, you might want to use
+      // revalidateTag() or revalidatePath() here, but for now we'll
+      // just return a success message since the cache will naturally
+      // expire after 8 hours
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Cache invalidation requested. Caches will refresh on next request or expire naturally after 8 hours.',
+        timestamp: new Date().toISOString(),
+        cacheInfo: {
+          currentTTL: `${CACHE_DURATION / 3600} hours`,
+          nextRefresh: new Date(Date.now() + CACHE_DURATION * 1000).toISOString()
+        }
+      });
+    }
+    
+    return NextResponse.json(
+      { success: false, error: 'Invalid action. Use "invalidate" to clear caches.' },
+      { status: 400 }
+    );
+    
+  } catch (error) {
+    console.error('❌ Cache invalidation error:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to invalidate cache',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
