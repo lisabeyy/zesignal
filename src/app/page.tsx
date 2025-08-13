@@ -203,6 +203,16 @@ export default function Home() {
     return () => window.removeEventListener('resize', updateIsMobile);
   }, []);
 
+  // Scroll to top when analysis modal opens on mobile
+  useEffect(() => {
+    if (showAnalysisModal && isMobile) {
+      const modal = document.querySelector('[data-modal="analysis"]');
+      if (modal) {
+        modal.scrollTop = 0;
+      }
+    }
+  }, [showAnalysisModal, isMobile]);
+
   // Set default token from URL parameter only if provided
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1009,7 +1019,7 @@ export default function Home() {
                             className="text-base hover:text-lime-300 mt-4 cursor-pointer font-medium text-lime-400 flex items-center"
                             onClick={() => (isMobile ? setShowAnalysisModal(true) : setExpandedAnalysis(true))}
                           >
-                            <span>{isMobile ? 'Open full screen' : 'View full analysis'}</span>
+                            <span>Read full analysis</span>
                             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
@@ -1066,10 +1076,10 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* Mobile Fullscreen Modal for AI Analysis */}
-                    {showAnalysisModal && isMobile && (
-                      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex">
-                        <div className="relative w-full max-h-screen overflow-y-auto">
+                                         {/* Mobile Fullscreen Modal for AI Analysis */}
+                     {showAnalysisModal && isMobile && (
+                       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex">
+                         <div className="relative w-full max-h-screen overflow-y-auto" data-modal="analysis">
                           <div className="sticky top-0 z-10 bg-black/80 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center">
