@@ -203,7 +203,7 @@ const getCachedSentimentData = unstable_cache(
 
 // Cached function for AI analysis
 const getCachedAnalysis = unstable_cache(
-  async (marketData: any[], sentimentData: any[]) => {
+  async (marketData: MarketData[], sentimentData: SentimentData[]) => {
     console.log('🤖 Generating fresh Claude AI analysis...');
     return await generateAnalysis(marketData, sentimentData);
   },
@@ -688,7 +688,7 @@ function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
 }
 
 // Fallback analysis when Claude fails
-function generateFallbackAnalysis(market: MarketData | null, _sentiment: SentimentData | null): ParsedClaudeResponse {
+function generateFallbackAnalysis(market: MarketData | null, sentiment: SentimentData | null): ParsedClaudeResponse {
   const currentPrice = market?.current_price || 0;
   
   return {
