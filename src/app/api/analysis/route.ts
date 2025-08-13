@@ -14,6 +14,19 @@ interface MarketData {
   market_cap: number;
   market_cap_rank: number;
   total_volume: number;
+  // On-chain metrics
+  dex_volume_24h?: number;
+  cex_volume_24h?: number;
+  dex_volume_percentage?: number;
+  cex_volume_percentage?: number;
+  active_addresses_24h?: number;
+  large_transactions_24h?: number;
+  whale_transactions_24h?: number;
+  liquidity_score?: number;
+  developer_score?: number;
+  community_score?: number;
+  public_interest_score?: number;
+  trust_score?: number;
 }
 
 interface TrendingPost {
@@ -87,6 +100,36 @@ interface ParsedClaudeResponse {
   divergence: string;
   divergenceStrength: number;
   riskLevel: string;
+  competitiveEdge?: {
+    arbitrageOpportunity: string;
+    arbitragePercentage: number;
+    whaleRetailMismatch: string;
+    hiddenLiquidity: string;
+    marketMakerActivity: string;
+    socialTechnicalConflict: string;
+  };
+  onChainMetrics?: {
+    dexDominance: string;
+    whaleActivity: string;
+    liquidityHealth: string;
+    networkActivity: string;
+  };
+  quantitativeInsights?: {
+    volumeTrend: string;
+    whaleConfidence: number;
+    liquidityScore: number;
+    networkGrowth: number;
+    sentimentMomentum: number;
+    technicalMomentum: number;
+  };
+  tradingStrategy?: {
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    riskRewardRatio: string;
+    positionSize: string;
+  };
   investorInsights: {
     shortTerm: string;
     mediumTerm: string;
@@ -289,7 +332,14 @@ async function generateAnalysis(marketData: MarketData[], sentimentData: Sentime
 
 // Generate Claude AI prompt for comprehensive analysis
 function generateClaudePrompt(market: MarketData, sentiment: SentimentData): string {
-  return `You are a professional cryptocurrency analyst providing clear, actionable investment insights. Analyze the following data and provide a comprehensive trading analysis.
+  return `You are a TOP-TIER cryptocurrency analyst specializing in NICHE, COMPETITIVE insights that combine sentiment analysis, real-time market data, and on-chain metrics. Your analysis must be UNIQUE and provide EDGE that other platforms don't offer.
+
+ANALYSIS APPROACH:
+- Focus on SENTIMENT-PRICE DIVERGENCE patterns that predict reversals
+- Identify WHALE vs RETAIL behavior mismatches
+- Detect DEX vs CEX arbitrage opportunities
+- Uncover HIDDEN LIQUIDITY patterns and market maker behavior
+- Analyze SOCIAL MOMENTUM vs TECHNICAL MOMENTUM conflicts
 
 MARKET DATA:
 - Cryptocurrency: ${market.name} (${market.symbol})
@@ -298,6 +348,18 @@ MARKET DATA:
 - Market Cap: $${(market.market_cap / 1e9).toFixed(2)}B
 - 24h Volume: $${(market.total_volume / 1e9).toFixed(2)}B
 - Market Rank: #${market.market_cap_rank}
+
+ON-CHAIN METRICS:
+${market.dex_volume_24h ? `- DEX Volume 24h: $${(market.dex_volume_24h / 1e6).toFixed(2)}M` : ''}
+${market.cex_volume_24h ? `- CEX Volume 24h: $${(market.cex_volume_24h / 1e6).toFixed(2)}M` : ''}
+${market.dex_volume_percentage ? `- DEX/CEX Ratio: ${market.dex_volume_percentage.toFixed(1)}%` : ''}
+${market.active_addresses_24h ? `- Active Addresses 24h: ${market.active_addresses_24h.toLocaleString()}` : ''}
+${market.large_transactions_24h ? `- Large Transactions (>$100K): ${market.large_transactions_24h}` : ''}
+${market.whale_transactions_24h ? `- Whale Transactions (>$1M): ${market.whale_transactions_24h}` : ''}
+${market.liquidity_score ? `- Liquidity Score: ${market.liquidity_score}/10` : ''}
+${market.developer_score ? `- Developer Score: ${market.developer_score}/10` : ''}
+${market.community_score ? `- Community Score: ${market.community_score}/10` : ''}
+${market.trust_score ? `- Trust Score: ${market.trust_score}/10` : ''}
 
 SENTIMENT DATA:
 - Sentiment Score: ${Math.round((sentiment.sentimentScore || 0.5) * 100)}%
@@ -309,14 +371,22 @@ SENTIMENT DATA:
 CRITICAL REQUIREMENTS:
 1. Provide ONLY concrete, actionable data - NO placeholder values like $0
 2. Use actual current price for calculations
-3. Make analysis easy for retail investors to understand
-4. Focus on practical trading decisions
+3. FOCUS ON NUMBERS, METRICS, AND PERCENTAGES - minimize text
+4. Include specific on-chain insights (DEX vs CEX, whale activity, liquidity)
+5. Make analysis data-driven with quantifiable metrics
+
+COMPETITIVE EDGE REQUIREMENTS:
+6. Identify UNIQUE patterns that other platforms miss (sentiment-price divergence, whale-retail mismatch)
+7. Provide ARBITRAGE OPPORTUNITIES between DEX/CEX when data shows discrepancies
+8. Detect HIDDEN LIQUIDITY patterns and market maker manipulation
+9. Analyze SOCIAL MOMENTUM vs TECHNICAL MOMENTUM conflicts
+10. Give SPECIFIC ENTRY/EXIT points with risk-reward ratios
 
 Please provide your analysis in the following JSON format:
 {
   "signal": "strong_buy|buy|hold|sell|strong_sell",
   "confidence": 0-100,
-  "reasoning": "Clear, concise explanation of your recommendation in 1-2 sentences",
+  "reasoning": "MAX 1 sentence with key numbers",
   "targetPrice": ${market.current_price * 1.1},
   "nearTermTarget": ${market.current_price * 1.05},
   "mediumTermTarget": ${market.current_price * 1.15},
@@ -324,11 +394,41 @@ Please provide your analysis in the following JSON format:
   "divergence": "aligned|bullish_divergence|bearish_divergence|neutral",
   "divergenceStrength": 0-100,
   "riskLevel": "low|medium|high",
+  "competitiveEdge": {
+    "arbitrageOpportunity": "dex_cex|none|cex_dex",
+    "arbitragePercentage": 0-100,
+    "whaleRetailMismatch": "whales_buying|whales_selling|aligned",
+    "hiddenLiquidity": "detected|not_detected",
+    "marketMakerActivity": "high|medium|low",
+    "socialTechnicalConflict": "social_bullish_technical_bearish|social_bearish_technical_bullish|aligned"
+  },
+  "onChainMetrics": {
+    "dexDominance": "high|medium|low",
+    "whaleActivity": "high|medium|low",
+    "liquidityHealth": "strong|moderate|weak",
+    "networkActivity": "high|medium|low"
+  },
+  "quantitativeInsights": {
+    "volumeTrend": "increasing|decreasing|stable",
+    "whaleConfidence": 0-100,
+    "liquidityScore": 0-100,
+    "networkGrowth": 0-100,
+    "sentimentMomentum": 0-100,
+    "technicalMomentum": 0-100
+  },
+  "tradingStrategy": {
+    "entryPrice": ${market.current_price * 0.98},
+    "stopLoss": ${market.current_price * 0.95},
+    "takeProfit1": ${market.current_price * 1.05},
+    "takeProfit2": ${market.current_price * 1.15},
+    "riskRewardRatio": "1:2.5|1:3|1:4|1:5",
+    "positionSize": "small|medium|large"
+  },
   "investorInsights": {
-    "shortTerm": "24-48 hour outlook in 1-2 clear sentences",
-    "mediumTerm": "1-2 week outlook in 1-2 clear sentences", 
-    "keyRisks": "Top 2-3 specific risks in simple terms",
-    "opportunities": "Top 2-3 specific opportunities in simple terms",
+    "shortTerm": "MAX 1 sentence with key numbers",
+    "mediumTerm": "MAX 1 sentence with key numbers", 
+    "keyRisks": "MAX 2 risks with percentages",
+    "opportunities": "MAX 2 opportunities with percentages",
     "technicalLevels": {
       "support": ${market.current_price * 0.95},
       "resistance": ${market.current_price * 1.05},
@@ -462,6 +562,20 @@ function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
       divergence: parsed.divergence || 'neutral',
       divergenceStrength: parsed.divergenceStrength || 50,
       riskLevel: parsed.riskLevel || 'medium',
+      onChainMetrics: parsed.onChainMetrics || {
+        dexDominance: 'medium',
+        whaleActivity: 'medium',
+        liquidityHealth: 'moderate',
+        networkActivity: 'medium'
+      },
+      quantitativeInsights: parsed.quantitativeInsights || {
+        volumeTrend: 'stable',
+        whaleConfidence: 50,
+        liquidityScore: 50,
+        networkGrowth: 50,
+        sentimentMomentum: 50,
+        technicalMomentum: 50
+      },
       investorInsights: parsed.investorInsights || {
         shortTerm: 'Limited data available',
         mediumTerm: 'Monitor price action',
@@ -496,6 +610,20 @@ function generateFallbackAnalysis(market: MarketData | null, _sentiment: Sentime
     divergence: 'neutral',
     divergenceStrength: 50,
     riskLevel: 'medium',
+    onChainMetrics: {
+      dexDominance: 'medium',
+      whaleActivity: 'medium',
+      liquidityHealth: 'moderate',
+      networkActivity: 'medium'
+    },
+    quantitativeInsights: {
+      volumeTrend: 'stable',
+      whaleConfidence: 50,
+      liquidityScore: 50,
+      networkGrowth: 50,
+      sentimentMomentum: 50,
+      technicalMomentum: 50
+    },
     investorInsights: {
       shortTerm: 'Limited analysis available. Monitor price action around current levels.',
       mediumTerm: 'Wait for AI analysis to resume for detailed outlook.',
@@ -539,6 +667,20 @@ function generateBasicAnalysis(market: MarketData): ParsedClaudeResponse {
     divergence: 'no_data',
     divergenceStrength: 0,
     riskLevel: 'medium',
+    onChainMetrics: {
+      dexDominance: 'medium',
+      whaleActivity: 'medium',
+      liquidityHealth: 'moderate',
+      networkActivity: 'medium'
+    },
+    quantitativeInsights: {
+      volumeTrend: priceChange > 0 ? 'increasing' : 'decreasing',
+      whaleConfidence: 50,
+      liquidityScore: 50,
+      networkGrowth: 50,
+      sentimentMomentum: 50,
+      technicalMomentum: 50
+    },
     investorInsights: {
       shortTerm: 'Monitor price action around current levels. No sentiment data available.',
       mediumTerm: 'Price momentum suggests direction, but sentiment confirmation needed.',

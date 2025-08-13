@@ -2,6 +2,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Custom Scrollbar Styles - Removed as no longer needed */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

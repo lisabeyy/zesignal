@@ -57,6 +57,7 @@ interface AnalysisData {
   sentimentTrend: string;
   socialVolume: number;
   recommendation: string;
+  reasoning: string;
   targetPrice: number;
   nearTermTarget?: number;
   mediumTermTarget?: number;
@@ -129,6 +130,36 @@ interface ApiAnalysisSignal {
   priceDirection?: string;
   divergenceStrength?: number;
   riskLevel?: string;
+  competitiveEdge?: {
+    arbitrageOpportunity: string;
+    arbitragePercentage: number;
+    whaleRetailMismatch: string;
+    hiddenLiquidity: string;
+    marketMakerActivity: string;
+    socialTechnicalConflict: string;
+  };
+  onChainMetrics?: {
+    dexDominance: string;
+    whaleActivity: string;
+    liquidityHealth: string;
+    networkActivity: string;
+  };
+  quantitativeInsights?: {
+    volumeTrend: string;
+    whaleConfidence: number;
+    liquidityScore: number;
+    networkGrowth: number;
+    sentimentMomentum: number;
+    technicalMomentum: number;
+  };
+  tradingStrategy?: {
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    riskRewardRatio: string;
+    positionSize: string;
+  };
   investorInsights?: {
     shortTerm?: string;
     mediumTerm?: string;
@@ -190,6 +221,58 @@ export default function Home() {
       fetchData(selectedCrypto);
     }
   }, [selectedCrypto]);
+
+  // Infinite scroll effect for trending posts carousel
+  useEffect(() => {
+    const carousel = document.getElementById('trending-carousel');
+    if (!carousel) return;
+
+    let isScrolling = false;
+    let scrollTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      if (isScrolling) return;
+
+      const scrollLeft = carousel.scrollLeft;
+      const scrollWidth = carousel.scrollWidth;
+      const clientWidth = carousel.clientWidth;
+
+      // Only trigger loop if user has scrolled significantly
+      const threshold = 50; // Increased threshold to prevent accidental triggers
+
+      // If scrolled to the end, loop back to the beginning
+      if (scrollLeft >= scrollWidth - clientWidth - threshold) {
+        isScrolling = true;
+        carousel.scrollLeft = 0;
+        // Reset flag after animation completes
+        setTimeout(() => {
+          isScrolling = false;
+        }, 500);
+      }
+      // If scrolled to the beginning, loop to the end
+      else if (scrollLeft <= threshold) {
+        isScrolling = true;
+        carousel.scrollLeft = scrollWidth - clientWidth;
+        // Reset flag after animation completes
+        setTimeout(() => {
+          isScrolling = false;
+        }, 500);
+      }
+    };
+
+    // Debounced scroll handler to prevent rapid firing
+    const debouncedHandleScroll = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(handleScroll, 100);
+    };
+
+    carousel.addEventListener('scroll', debouncedHandleScroll);
+
+    return () => {
+      carousel.removeEventListener('scroll', debouncedHandleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [sentimentData?.trendingPosts]);
 
   // Helper function to fix sentence spacing in AI-generated text
   const fixSentenceSpacing = (text: string): string => {
@@ -322,6 +405,7 @@ export default function Home() {
           sentimentTrend: getSentimentTrend(coinSentimentData?.sentimentScore || 0.5),
           socialVolume: coinSentimentData?.postsCount || 0,
           recommendation: analysisSignal?.reasoning || 'No recommendation available',
+          reasoning: analysisSignal?.reasoning || 'No reasoning available',
           targetPrice: analysisSignal?.targetPrice || 0,
           priceDirection: analysisSignal?.priceDirection || 'neutral',
           divergenceStrength: analysisSignal?.divergenceStrength || 0,
@@ -364,22 +448,60 @@ export default function Home() {
   const formatSentimentText = (text: string) => {
     if (!text) return [];
 
-    return text.split('\n').map((line, index) => {
-      if (!line.trim()) return null;
+    // Split text into sections and process each one
+    const sections = text.split(/(?=Overall Assessment:|Key Insights:|Market Sentiment:|Social Trends:|Risk Factors:|Opportunities:|Conclusion:)/);
 
-      let processedLine = line.replace(/^#{1,6}\s*/, '');
-      if (!processedLine.trim()) return null;
+    return sections.map((section, sectionIndex) => {
+      if (!section.trim()) return null;
 
-      const isBold = line.startsWith('#') || processedLine.includes('**');
-      processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '$1');
-      processedLine = processedLine.replace(/\*(.*?)\*/g, '$1');
+      const lines = section.split('\n').filter(line => line.trim());
+      if (lines.length === 0) return null;
 
-      return {
-        text: processedLine.trim(),
-        isBold: isBold,
-        key: index
-      };
-    }).filter(Boolean);
+      // Process section header
+      const header = lines[0].trim();
+      const isSectionHeader = /^(Overall Assessment|Key Insights|Market Sentiment|Social Trends|Risk Factors|Opportunities|Conclusion):/.test(header);
+
+      if (isSectionHeader) {
+        // Return clean section header
+        const cleanHeader = getCleanSectionHeader(header);
+        return {
+          text: cleanHeader,
+          isBold: true,
+          isSectionHeader: true,
+          isListItem: false,
+          key: `header-${sectionIndex}`
+        };
+      }
+
+      // Process content lines
+      return lines.map((line, lineIndex) => {
+        if (!line.trim()) return null;
+
+        let processedLine = line.replace(/^#{1,6}\s*/, '');
+        if (!processedLine.trim()) return null;
+
+        // Remove markdown formatting
+        processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '$1');
+        processedLine = processedLine.replace(/\*(.*?)\*/g, '$1');
+
+        // Check if it's a list item
+        const isListItem = /^[-•*]\s/.test(processedLine);
+        const isNumberedList = /^\d+\.\s/.test(processedLine);
+
+        return {
+          text: processedLine.trim(),
+          isBold: line.startsWith('#') || processedLine.includes('**'),
+          isSectionHeader: false,
+          isListItem: isListItem || isNumberedList,
+          key: `section-${sectionIndex}-line-${lineIndex}`
+        };
+      }).filter(Boolean);
+    }).filter(Boolean).flat();
+  };
+
+  // Helper function to get clean section headers
+  const getCleanSectionHeader = (header: string): string => {
+    return header.trim();
   };
 
   const cleanSummaryText = (text: string) => {
@@ -510,70 +632,142 @@ export default function Home() {
           </div>
         )}
 
-        {/* Crypto Selection */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-300 mb-3">Pick a token</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {cryptoOptions.map((crypto) => (
-            <button
-              key={crypto.id}
-              onClick={() => setSelectedCrypto(crypto.id)}
-              disabled={loading}
-              className={`p-4 rounded-xl border-2 transition-all duration-300 ${selectedCrypto === crypto.id
-                ? 'border-lime-400 bg-lime-400/10 shadow-lg shadow-lime-400/25'
-                : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <div className="w-16 h-12 rounded-lg mx-auto mb-3 flex items-center justify-center text-white font-bold text-sm bg-gray-700">
-                ${crypto.symbol}
-              </div>
-              <div className="font-semibold text-base">{crypto.name}</div>
-            </button>
-          ))}
+        {/* Crypto Selection - Compact & Modern */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-medium text-gray-300">Select Token</h2>
+            <div className="text-xs text-gray-500 px-2 py-1 bg-gray-800/50 rounded-full">
+              {cryptoOptions.length} tokens available
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {cryptoOptions.map((crypto) => (
+              <button
+                key={crypto.id}
+                onClick={() => setSelectedCrypto(crypto.id)}
+                disabled={loading}
+                className={`group relative px-4 py-2.5 rounded-lg border transition-all duration-200 flex items-center space-x-2 transform hover:scale-105 ${selectedCrypto === crypto.id
+                  ? 'border-lime-400 bg-lime-400/10 text-lime-300 shadow-sm'
+                  : 'border-gray-600 bg-gray-800/30 hover:border-gray-500 hover:bg-gray-800/50 text-gray-300'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${selectedCrypto === crypto.id ? 'bg-lime-400 text-black' : 'bg-gray-600 text-gray-300'
+                  }`}>
+                  {crypto.symbol.charAt(0)}
+                </div>
+                <span className="font-medium text-sm">{crypto.symbol}</span>
+                {selectedCrypto === crypto.id && (
+                  <div className="w-2 h-2 bg-lime-400 rounded-full ml-1"></div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {!selectedCrypto ? (
-          <div className="text-center py-16">
-            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-gray-700 shadow-xl">
-              <BarChart3 className="w-20 h-20 mx-auto mb-6 opacity-50" />
-              <h3 className="text-2xl font-bold text-gray-300 mb-4">Select a Cryptocurrency</h3>
-              <p className="text-gray-500 mb-6">Choose a token from above to view real-time market data, social sentiment analysis, and AI-powered trading insights.</p>
-              <div className="flex justify-center space-x-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-blue-600">📊</div>
-                  <p className="text-xs text-gray-400">Market Data</p>
+          <div className="text-center py-12 animate-in fade-in duration-500">
+            <div className="bg-gradient-to-r from-gray-900/60 to-gray-800/60 backdrop-blur-sm rounded-xl p-8 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              {/* Hero Section */}
+              <div className="mb-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-lime-400 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-8 h-8 text-black" />
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-lime-600">💬</div>
-                  <p className="text-xs text-gray-400">Social Sentiment</p>
+                <h3 className="text-xl font-semibold text-white mb-2">Ready to Analyze?</h3>
+                <p className="text-gray-400 text-sm">Select a cryptocurrency to unlock comprehensive insights</p>
+              </div>
+
+              {/* Feature Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/30">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-sm font-medium text-white mb-1">Market Data</h4>
+                  <p className="text-xs text-gray-400">Real-time prices, volume & trends</p>
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-lg mx-auto mb-2 flex items-center justify-center text-white font-bold text-sm bg-purple-600">🤖</div>
-                  <p className="text-xs text-gray-400">AI Analysis</p>
+
+                <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/30">
+                  <div className="w-8 h-8 bg-lime-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-4 h-4 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-sm font-medium text-white mb-1">Social Sentiment</h4>
+                  <p className="text-xs text-gray-400">Community mood & engagement</p>
                 </div>
+
+                <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-700/30">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-sm font-medium text-white mb-1">AI Analysis</h4>
+                  <p className="text-xs text-gray-400">Smart insights & predictions</p>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/30">
+                <p className="text-sm text-gray-300 mb-3">💡 <strong>Pro tip:</strong> Start with Bitcoin for comprehensive market analysis</p>
+                <button
+                  onClick={() => setSelectedCrypto('bitcoin')}
+                  className="px-4 py-2 bg-lime-500/20 hover:bg-lime-500/30 border border-lime-400/30 rounded-lg text-lime-300 text-sm font-medium transition-all duration-200"
+                >
+                  Try Bitcoin Analysis →
+                </button>
               </div>
             </div>
           </div>
         ) : loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400 mx-auto mb-4"></div>
-              <p className="text-gray-400">Analyzing real-time data...</p>
-              <p className="text-xs text-gray-600 mt-2">Connecting to ZeDashboard & CoinGecko MCPs</p>
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center max-w-md">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-lime-400 to-green-500 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+                  <BarChart3 className="w-8 h-8 text-black" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-lime-400 rounded-full flex items-center justify-center">
+                  <div className="w-3 h-3 bg-black rounded-full animate-ping"></div>
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Analyzing {selectedCrypto?.charAt(0).toUpperCase() + selectedCrypto?.slice(1)}</h3>
+              <p className="text-gray-400 text-sm mb-4">Gathering real-time market data and social sentiment</p>
+
+              {/* Loading Steps */}
+              <div className="space-y-2 text-left">
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse"></div>
+                  <span className="text-gray-500">Connecting to CoinGecko MCP...</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse"></div>
+                  <span className="text-gray-500">Fetching social sentiment data...</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse"></div>
+                  <span className="text-gray-500">Generating AI analysis...</span>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
           <>
             {/* Market Data Section - Full Width Above */}
             <div className="mb-8">
-              <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-700 shadow-xl">
+              <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-5 md:p-6 border border-gray-700 shadow-xl">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center">
-                    <BarChart3 className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
-                    <h2 className="text-2xl font-bold">Market Overview</h2>
+                    <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-green-500 rounded-lg flex items-center justify-center mr-3">
+                      <BarChart3 className="w-6 h-6 text-black" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Market Overview</h2>
+                      <p className="text-sm text-gray-400">Real-time market data from CoinGecko MCP</p>
+                    </div>
                   </div>
-                  <div className="text-xs hidden md:block text-gray-400 px-3 py-2 bg-blue-500/20 rounded-full border border-blue-500/30">
+                  <div className="text-xs hidden md:block text-lime-300 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
                     CoinGecko MCP • Real-time Data
                   </div>
                 </div>
@@ -616,7 +810,7 @@ export default function Home() {
                     <div className="bg-black/40 hidden md:block rounded-lg p-4 border border-gray-600/50">
                       <div className="text-xs text-gray-400 mb-1">Market Rank</div>
                       <div className="text-xl font-bold text-white">
-                        {marketData.marketCapRank}
+                        #{marketData.marketCapRank}
                       </div>
                     </div>
                   </div>
@@ -631,19 +825,24 @@ export default function Home() {
             </div>
 
             {/* Social Sentiment Section - Full Width Below */}
-            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-700 shadow-xl">
+            <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-sm rounded-xl p-5 md:p-6 border border-gray-700 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
-                  <Users className="w-7 h-7 mr-3" style={{ color: '#D0FF80' }} />
-                  <h2 className="text-2xl font-bold">Social Sentiment Analysis</h2>
+                  <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-green-500 rounded-lg flex items-center justify-center mr-3">
+                    <Users className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Social Sentiment Analysis</h2>
+                    <p className="text-sm text-gray-400">Real-time sentiment powered by ZeDashboard MCP</p>
+                  </div>
                 </div>
-                <div className="text-xs hidden md:block text-gray-400 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
+                <div className="text-xs hidden md:block text-lime-300 px-3 py-2 bg-lime-500/20 rounded-full border border-lime-500/30">
                   ZeDashboard MCP • AI-Powered
                 </div>
               </div>
 
               {sentimentData ? (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {/* Left Column - Sentiment Metrics */}
                   <div className="grid lg:grid-cols-2 gap-6">
                     {/* Sentiment Score */}
@@ -695,36 +894,92 @@ export default function Home() {
                   </div>
 
                   {/* AI Sentiment Analysis - Full Width */}
-                  <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-gray-600/50">
-                    <h5 className="text-base font-semibold text-gray-400 mb-4">AI SENTIMENT ANALYSIS</h5>
+                  <div className="bg-black/40 rounded-lg p-5 border border-gray-600/50">
+                    <h5 className="text-base font-semibold text-gray-300 mb-4 flex items-center">
+                      <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center mr-2">
+                        <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                      </div>
+                      AI Sentiment Analysis
+                    </h5>
                     {!expandedAnalysis ? (
                       <>
-                        <p className="text-base text-gray-300 leading-relaxed">
-                          {cleanSummaryText(sentimentData.summary).substring(0, 300)}...
-                        </p>
+                        <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-600/30">
+                          <div className="space-y-3">
+                            {/* Show first section header if available */}
+                            {(() => {
+                              const sections = cleanSummaryText(sentimentData.summary).split(/(?=Overall Assessment:|Key Insights:|Market Sentiment:|Social Trends:|Risk Factors:|Opportunities:|Conclusion:)/);
+                              const firstSection = sections[0];
+                              if (firstSection && firstSection.length > 50) {
+                                return (
+                                  <div className="text-base text-gray-200 leading-relaxed font-medium tracking-wide">
+                                    {firstSection.substring(0, 200)}...
+                                  </div>
+                                );
+                              }
+                              return (
+                                <p className="text-base text-gray-200 leading-relaxed font-medium tracking-wide">
+                                  {cleanSummaryText(sentimentData.summary).substring(0, 300)}...
+                                </p>
+                              );
+                            })()}
+                          </div>
+                        </div>
                         <button
-                          className="text-base hover:text-lime-300 mt-4 cursor-pointer font-medium"
-                          style={{ color: '#D0FF80' }}
+                          className="text-base hover:text-lime-300 mt-4 cursor-pointer font-medium text-lime-400 flex items-center"
                           onClick={() => setExpandedAnalysis(true)}
                         >
-                          View full analysis →
+                          <span>View full analysis</span>
+                          <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
                       </>
                     ) : (
                       <>
-                        <div className="max-h-64 md:max-h-64 max-h-96 overflow-y-auto">
-                          {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => (
-                            <div key={line?.key} className={`mb-4 ${line?.isBold ? 'font-bold text-white text-lg' : 'text-gray-300 text-base'} leading-relaxed`}>
-                              {line?.text}
-                            </div>
-                          ))}
+                        <div className="bg-gray-800/30 rounded-lg p-4 border border-gray-600/30 mb-4">
+                          <div className="space-y-4">
+                            {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => {
+                              if (!line) return null;
+
+                              return (
+                                <div key={line.key} className={`${line.isSectionHeader
+                                  ? 'pb-3 border-b border-gray-600/30'
+                                  : line.isListItem
+                                    ? 'ml-6 flex items-start'
+                                    : ''
+                                  }`}>
+                                  {line.isSectionHeader ? (
+                                    // Section Header
+                                    <div className="text-lg font-bold text-lime-300 mb-3">
+                                      {line.text}
+                                    </div>
+                                  ) : line.isListItem ? (
+                                    // List Item
+                                    <div className="flex items-start space-x-2">
+                                      <div className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2.5 flex-shrink-0"></div>
+                                      <span className="text-gray-200 text-base leading-relaxed font-medium tracking-wide">
+                                        {line.text}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    // Regular Text
+                                    <div className={`${line.isBold ? 'font-bold text-white text-base' : 'text-gray-200 text-base'} leading-relaxed font-medium tracking-wide`}>
+                                      {line.text}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                         <button
-                          className="text-base hover:text-lime-300 mt-4 cursor-pointer font-medium"
-                          style={{ color: '#D0FF80' }}
+                          className="text-base hover:text-lime-300 cursor-pointer font-medium text-lime-400 flex items-center"
                           onClick={() => setExpandedAnalysis(false)}
                         >
-                          ← Show less
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                          <span>Show less</span>
                         </button>
                       </>
                     )}
@@ -735,81 +990,158 @@ export default function Home() {
                   {/* Trending Posts - Full Width Below Everything */}
                   {sentimentData && sentimentData.trendingPosts && Array.isArray(sentimentData.trendingPosts) && sentimentData.trendingPosts.length > 0 && (
                     <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-gray-600/50">
-                      <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
-                        <span>TRENDING POSTS</span>
-                        <svg className="w-4 h-4 ml-2 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                      <h5 className="text-sm font-semibold text-gray-300 mb-3 flex items-center">
+                        <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center mr-2">
+                          <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                        </div>
+                        Trending Posts
+                        <svg className="w-4 h-4 ml-2 text-lime-400" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                         </svg>
+                        <span className="text-xs text-gray-500 ml-2">← Scroll to see more →</span>
                       </h5>
                       <div className="relative">
-                        {/* Carousel Container */}
-                        <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2">
-                          {sentimentData.trendingPosts.slice(0, 6).map((post, index) => {
+                        {/* Scroll Indicators */}
+                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-gradient-to-r from-gray-900/80 to-transparent rounded-l-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </div>
+                        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-gradient-to-l from-gray-900/80 to-transparent rounded-r-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
 
-                            return (
-                              <div key={index} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-3 md:p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
-                                {/* Creator Info */}
-                                {post.creator && (
-                                  <div className="flex items-center space-x-3 mb-3">
-                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
-                                      {post.creator.avatar ? (
-                                        <img
-                                          src={post.creator.avatar}
-                                          alt={post.creator.displayName || post.creator.name}
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            const target = e.currentTarget as HTMLImageElement;
-                                            target.style.display = 'none';
-                                            const fallback = target.nextElementSibling as HTMLElement;
-                                            if (fallback) {
-                                              fallback.style.display = 'flex';
-                                            }
-                                          }}
-                                        />
-                                      ) : null}
-                                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: post.creator.avatar ? 'none' : 'flex' }}>
-                                        {(post.creator.displayName || post.creator.name).charAt(0).toUpperCase()}
-                                      </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-white truncate">
-                                        {post.creator.displayName || post.creator.name}
-                                      </div>
-                                      <div className="text-xs text-gray-400 truncate">
-                                        @{post.creator.name}
-                                      </div>
+                        {/* Carousel Container with Infinite Loop */}
+                        <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 px-8" id="trending-carousel">
+                          {/* First set of posts */}
+                          {sentimentData.trendingPosts.slice(0, 6).map((post, index) => (
+                            <div key={`first-${index}`} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-2 md:p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
+                              {/* Creator Info */}
+                              {post.creator && (
+                                <div className="flex items-center space-x-3 mb-3">
+                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
+                                    {post.creator.avatar ? (
+                                      <img
+                                        src={post.creator.avatar}
+                                        alt={post.creator.displayName || post.creator.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.currentTarget as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          const fallback = target.nextElementSibling as HTMLElement;
+                                          if (fallback) {
+                                            fallback.style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: post.creator.avatar ? 'none' : 'flex' }}>
+                                      {(post.creator.displayName || post.creator.name).charAt(0).toUpperCase()}
                                     </div>
                                   </div>
-                                )}
-
-                                <div className="flex-1">
-                                  <div className="text-sm font-medium text-white mb-2 whitespace-pre-line">
-                                    {post.content.trim().slice(0, 100) || post.title || 'No content available'} {post.content.trim().length > 100 && '...'}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold text-white truncate">
+                                      {post.creator.displayName || post.creator.name}
+                                    </div>
+                                    <div className="text-xs text-gray-400 truncate">
+                                      @{post.creator.name}
+                                    </div>
                                   </div>
                                 </div>
+                              )}
 
-                                <div className="flex justify-between items-center mt-auto pt-3">
-
-                                  <span className="text-lime-400 font-medium text-sm">{formatNumber(post.engagement)} Views</span>
-
-                                  <div className="flex items-center space-x-2">
-                                    {post.url && (
-                                      <a
-                                        href={post.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-2 py-1 bg-gray-700/50 hover:bg-gray-600/50 rounded-full flex items-center space-x-1 text-xs text-gray-300 hover:text-white transition-colors">
-                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                        </svg>
-                                        <span>View on X</span>
-                                      </a>
-                                    )}
-                                  </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-white mb-2 whitespace-pre-line">
+                                  {post.content.trim().slice(0, 100) || post.title || 'No content available'} {post.content.trim().length > 100 && '...'}
                                 </div>
                               </div>
-                            );
-                          })}
+
+                              <div className="flex justify-between items-center mt-auto pt-3">
+
+                                <span className="text-lime-400 font-medium text-sm">{formatNumber(post.engagement)} Views</span>
+
+                                <div className="flex items-center space-x-2">
+                                  {post.url && (
+                                    <a
+                                      href={post.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-2 py-1 bg-gray-700/50 hover:bg-gray-600/50 rounded-full flex items-center space-x-1 text-xs text-gray-300 hover:text-white transition-colors">
+                                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                      </svg>
+                                      <span>View on X</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Duplicate posts for infinite loop effect */}
+                          {sentimentData.trendingPosts.slice(0, 6).map((post, index) => (
+                            <div key={`duplicate-${index}`} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-2 md:p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
+                              {/* Creator Info */}
+                              {post.creator && (
+                                <div className="flex items-center space-x-3 mb-3">
+                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
+                                    {post.creator.avatar ? (
+                                      <img
+                                        src={post.creator.avatar}
+                                        alt={post.creator.displayName || post.creator.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.currentTarget as HTMLImageElement;
+                                          target.style.display = 'none';
+                                          const fallback = target.nextElementSibling as HTMLElement;
+                                          if (fallback) {
+                                            fallback.style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm" style={{ display: post.creator.avatar ? 'none' : 'flex' }}>
+                                      {(post.creator.displayName || post.creator.name).charAt(0).toUpperCase()}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold text-white truncate">
+                                      {post.creator.displayName || post.creator.name}
+                                    </div>
+                                    <div className="text-xs text-gray-400 truncate">
+                                      @{post.creator.name}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-white mb-2 whitespace-pre-line">
+                                  {post.content.trim().slice(0, 100) || post.title || 'No content available'} {post.content.trim().length > 100 && '...'}
+                                </div>
+                              </div>
+
+                              <div className="flex justify-between items-center mt-auto pt-3">
+                                <span className="text-lime-400 font-medium text-sm">{formatNumber(post.engagement)} Views</span>
+                                <div className="flex items-center space-x-2">
+                                  {post.url && (
+                                    <a
+                                      href={post.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-2 py-1 bg-gray-700/50 hover:bg-gray-600/50 rounded-full flex items-center space-x-1 text-xs text-gray-300 hover:text-white transition-colors">
+                                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                      </svg>
+                                      <span>View on X</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
 
                         {/* Carousel Navigation Dots */}
@@ -848,16 +1180,36 @@ export default function Home() {
 
         {analysis && (
           <div className="mt-8 bg-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-lime-400/30">
-            <div className="flex items-center mb-6">
-              <BarChart3 className="w-6 h-6 mr-2" style={{ color: '#D0FF80' }} />
-              <h3 className="text-xl font-semibold">ENHANCED AI ANALYSIS</h3>
-              <div className="ml-auto text-xs text-gray-500 px-2 py-1 bg-purple-500/20 rounded">
+            <div className="flex items-center mb-8">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-green-500 rounded-lg flex items-center justify-center mr-3">
+                  <BarChart3 className="w-6 h-6 text-black" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Enhanced AI Analysis</h3>
+                  <p className="text-sm text-gray-400">Real-time insights powered by Claude AI</p>
+                </div>
+              </div>
+              <div className="ml-auto text-xs text-gray-300 px-3 py-2 bg-gradient-to-r from-purple-500/30 to-blue-500/30 rounded-full border border-purple-500/20">
                 AI-Powered
               </div>
             </div>
 
+            {/* AI Reasoning - Top Section */}
+            <div className="bg-gradient-to-r from-lime-500/10 to-green-500/10 rounded-lg p-5 border border-lime-500/20 mb-6">
+              <h5 className="text-base font-semibold text-lime-400 mb-3 flex items-center">
+                <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                  <BarChart3 className="w-4 h-4 text-lime-400" />
+                </div>
+                AI Analysis Reasoning
+              </h5>
+              <p className="text-base text-gray-200 leading-relaxed font-medium tracking-wide">
+                {analysis.reasoning}
+              </p>
+            </div>
+
             {/* Key Metrics Overview - Top Row */}
-            <div className="grid md:grid-cols-4 gap-4 mb-6">
+            <div className="grid md:grid-cols-4 gap-4 mb-8">
               <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 text-center">
                 <div className="text-sm text-gray-400 mb-1">Confidence</div>
                 <div className="text-lg font-bold" style={{ color: '#D0FF80' }}>{analysis.confidence}%</div>
@@ -902,8 +1254,13 @@ export default function Home() {
 
 
             {/* Simple Target Price Overview */}
-            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-6">
-              <h5 className="text-sm font-semibold text-gray-400 mb-3">Price Targets</h5>
+            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-8">
+              <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center mr-2">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                </div>
+                Price Targets
+              </h5>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg p-3 border border-blue-500/30">
                   <div className="text-xs text-blue-400 mb-1">Near-term Target</div>
@@ -927,8 +1284,13 @@ export default function Home() {
 
 
             {/* Simple Technical Levels */}
-            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-6">
-              <h5 className="text-sm font-semibold text-gray-400 mb-3">Technical Levels</h5>
+            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-8">
+              <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center mr-2">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                </div>
+                Technical Levels
+              </h5>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Support</div>
@@ -952,8 +1314,13 @@ export default function Home() {
             </div>
 
             {/* Compact Price-Sentiment Divergence Analysis */}
-            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-6">
-              <h5 className="text-sm font-semibold text-gray-400 mb-4">Price-Sentiment Divergence</h5>
+            <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50 mb-8">
+              <h5 className="text-base font-semibold text-gray-300 mb-4 flex items-center">
+                <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center mr-2">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                </div>
+                Price-Sentiment Divergence
+              </h5>
 
               {/* Compact Divergence Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -992,48 +1359,66 @@ export default function Home() {
             </div>
 
             {/* Investor Insights - Fifth Row */}
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50">
-                <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
-                  <Clock className="w-4 h-4 mr-2 text-blue-400" />
+                <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                  <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                    <Clock className="w-4 h-4 text-lime-400" />
+                  </div>
                   Short Term Outlook (24-48h)
                 </h5>
-                <div className="text-base text-gray-300 leading-relaxed">{analysis.investorInsights.shortTerm}</div>
+                <div className="text-base text-gray-300 leading-relaxed font-medium tracking-wide max-w-none">
+                  {analysis.investorInsights.shortTerm}
+                </div>
               </div>
               <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50">
-                <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
-                  <Calendar className="w-4 h-4 mr-2 text-green-400" />
+                <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                  <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                    <Calendar className="w-4 h-4 text-lime-400" />
+                  </div>
                   Medium Term Outlook (1-2 weeks)
                 </h5>
-                <div className="text-base text-gray-300 leading-relaxed">{analysis.investorInsights.mediumTerm}</div>
+                <div className="text-base text-gray-300 leading-relaxed font-medium tracking-wide max-w-none">
+                  {analysis.investorInsights.mediumTerm}
+                </div>
               </div>
             </div>
 
             {/* Risks & Opportunities - Sixth Row */}
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50">
-                <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-orange-400" />
+                <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                  <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                    <AlertTriangle className="w-4 h-4 text-lime-400" />
+                  </div>
                   Key Risks
                 </h5>
-                <div className="text-base text-gray-300 leading-relaxed">{fixSentenceSpacing(analysis.investorInsights.keyRisks)}</div>
+                <div className="text-base text-gray-300 leading-relaxed font-medium tracking-wide max-w-none">
+                  {fixSentenceSpacing(analysis.investorInsights.keyRisks)}
+                </div>
               </div>
               <div className="bg-black/40 rounded-lg p-4 border border-gray-700/50">
-                <h5 className="text-sm font-semibold text-gray-400 mb-3 flex items-center">
-                  <TrendingUp className="w-4 h-4 mr-2 text-lime-400" />
+                <h5 className="text-base font-semibold text-gray-300 mb-3 flex items-center">
+                  <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                    <TrendingUp className="w-4 h-4 text-lime-400" />
+                  </div>
                   Opportunities
                 </h5>
-                <div className="text-base text-gray-300 leading-relaxed">{fixSentenceSpacing(analysis.investorInsights.opportunities)}</div>
+                <div className="text-base text-gray-300 leading-relaxed font-medium tracking-wide max-w-none">
+                  {analysis.investorInsights.opportunities}
+                </div>
               </div>
             </div>
 
             {/* AI Recommendation - Final Row */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-lg p-4 border border-gray-600/50">
+            <div className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-lg p-4 border border-gray-600/50 hover:border-lime-400/30 transition-all duration-300">
               <h4 className="font-semibold mb-3 flex items-center" style={{ color: '#D0FF80' }}>
-                <AlertTriangle className="w-4 h-4 mr-2" />
+                <div className="w-6 h-6 bg-lime-500/20 rounded-full flex items-center justify-center mr-3">
+                  <AlertTriangle className="w-4 h-4 text-lime-400" />
+                </div>
                 AI Trading Recommendation:
               </h4>
-              <p className="text-gray-200 leading-relaxed text-base">{analysis.recommendation}</p>
+              <p className="text-gray-200 leading-relaxed text-base font-medium tracking-wide">{analysis.recommendation}</p>
             </div>
           </div>
         )}
