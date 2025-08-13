@@ -1076,10 +1076,10 @@ export default function Home() {
                       )}
                     </div>
 
-                                         {/* Mobile Fullscreen Modal for AI Analysis */}
-                     {showAnalysisModal && isMobile && (
-                       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex">
-                         <div className="relative w-full max-h-screen overflow-y-auto" data-modal="analysis">
+                    {/* Mobile Fullscreen Modal for AI Analysis */}
+                    {showAnalysisModal && isMobile && (
+                      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex">
+                        <div className="relative w-full max-h-screen overflow-y-auto" data-modal="analysis">
                           <div className="sticky top-0 z-10 bg-black/80 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <div className="w-5 h-5 bg-lime-500/20 rounded-full flex items-center justify-center">
