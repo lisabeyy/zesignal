@@ -995,26 +995,10 @@ export default function Home() {
                           <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
                         </div>
                         Trending Posts
-                        <svg className="w-4 h-4 ml-2 text-lime-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                        </svg>
-                        <span className="text-xs text-gray-500 ml-2">← Scroll to see more →</span>
                       </h5>
                       <div className="relative">
-                        {/* Scroll Indicators */}
-                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-gradient-to-r from-gray-900/80 to-transparent rounded-l-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </div>
-                        <div className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 bg-gradient-to-l from-gray-900/80 to-transparent rounded-r-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-lime-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-
                         {/* Carousel Container with Infinite Loop */}
-                        <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 px-8" id="trending-carousel">
+                        <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2" id="trending-carousel">
                           {/* First set of posts */}
                           {sentimentData.trendingPosts.slice(0, 6).map((post, index) => (
                             <div key={`first-${index}`} className="flex-shrink-0 w-80 bg-gray-800/50 rounded-lg p-2 md:p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all flex flex-col">
