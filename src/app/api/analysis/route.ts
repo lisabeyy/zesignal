@@ -5,8 +5,8 @@ import { connectCG, getCoinData } from '@/lib/mcp-coingecko';
 import { connectZE, getSocialSentiment } from '@/lib/mcp-zedashboard';
 import Anthropic from '@anthropic-ai/sdk';
 
-// Cache configuration - 8 hours in seconds
-const CACHE_DURATION = 8 * 60 * 60; // 8 hours
+// Cache configuration - 4 hours in seconds
+const CACHE_DURATION = 4 * 60 * 60; // 4 hours
 
 // Type definitions
 interface MarketData {
@@ -248,16 +248,16 @@ export async function GET(request: Request) {
       analysis,
       selectedToken,
       timestamp: new Date().toISOString(),
-      cacheStatus: 'Cached Data (8h TTL)',
-      cacheExpiry: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
-      cacheInfo: {
-        duration: `${CACHE_DURATION / 3600} hours`,
-        nextRefresh: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
-        cacheType: 'Next.js unstable_cache + HTTP headers'
-      }
+                   cacheStatus: 'Cached Data (4h TTL)',
+             cacheExpiry: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
+             cacheInfo: {
+               duration: `${CACHE_DURATION / 3600} hours`,
+               nextRefresh: new Date(Date.now() + CACHE_DURATION * 1000).toISOString(),
+               cacheType: 'Next.js unstable_cache + HTTP headers'
+             }
     });
 
-    // 5. Set comprehensive caching headers for 8 hours
+               // 5. Set comprehensive caching headers for 4 hours
     response.headers.set('Cache-Control', `public, s-maxage=${CACHE_DURATION}, stale-while-revalidate=${CACHE_DURATION * 2}`);
     response.headers.set('CDN-Cache-Control', `public, max-age=${CACHE_DURATION}`);
     response.headers.set('Vercel-CDN-Cache-Control', `public, max-age=${CACHE_DURATION}`);
@@ -291,11 +291,11 @@ export async function POST(request: Request) {
       // Note: In a real production environment, you might want to use
       // revalidateTag() or revalidatePath() here, but for now we'll
       // just return a success message since the cache will naturally
-      // expire after 8 hours
+      // expire after 4 hours
       
       return NextResponse.json({
         success: true,
-        message: 'Cache invalidation requested. Caches will refresh on next request or expire naturally after 8 hours.',
+        message: 'Cache invalidation requested. Caches will refresh on next request or expire naturally after 4 hours.',
         timestamp: new Date().toISOString(),
         cacheInfo: {
           currentTTL: `${CACHE_DURATION / 3600} hours`,
@@ -688,7 +688,7 @@ function parseClaudeResponse(claudeResponse: string): ParsedClaudeResponse {
 }
 
 // Fallback analysis when Claude fails
-function generateFallbackAnalysis(market: MarketData | null, sentiment: SentimentData | null): ParsedClaudeResponse {
+function generateFallbackAnalysis(market: MarketData | null, _sentiment: SentimentData | null): ParsedClaudeResponse {
   const currentPrice = market?.current_price || 0;
   
   return {

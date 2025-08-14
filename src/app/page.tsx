@@ -436,7 +436,7 @@ export default function Home() {
           },
           analysis: {
             social: coinSentimentData?.summary?.substring(0, 200) + '...' || 'Social sentiment data processing...',
-            market: coinMarketData ? `Current price: $${(coinMarketData.current_price || 0).toLocaleString()} (${(coinMarketData.price_change_percentage_24h || 0).toFixed(2)}% 24h). Market cap rank: #${coinMarketData.market_cap_rank || 'N/A'}. Trading volume: $${((coinMarketData.total_volume || 0) / 1e9).toFixed(2)}B` : 'Market data loading...',
+            market: coinMarketData ? `Current price: ${formatPrice(coinMarketData.current_price || 0)} (${(coinMarketData.price_change_percentage_24h || 0).toFixed(2)}% 24h). Market cap rank: #${coinMarketData.market_cap_rank || 'N/A'}. Trading volume: $${((coinMarketData.total_volume || 0) / 1e9).toFixed(2)}B` : 'Market data loading...',
             signal: analysisSignal?.signal || 'neutral',
             divergence: analysisSignal?.divergence || 'neutral'
           }
@@ -583,12 +583,12 @@ export default function Home() {
     if (price === 0) return '$0';
     if (!price || isNaN(price)) return '$0';
 
-    // For very small prices (less than $0.01), show more decimal places
+    // For very small prices (less than $0.01), show full precision
     if (price < 0.01) {
       return `$${price.toFixed(6).replace(/\.?0+$/, '')}`;
     }
 
-    // For small prices (less than $1), show up to 4 decimal places
+    // For small prices (less than $1), show full precision
     if (price < 1) {
       return `$${price.toFixed(4).replace(/\.?0+$/, '')}`;
     }
@@ -862,12 +862,12 @@ export default function Home() {
                   </div>
 
                   {marketData ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       {/* Price Card */}
-                      <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50">
+                      <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50 md:col-span-2">
                         <div className="text-xs text-gray-400 mb-1">Current Price</div>
                         <div className="text-2xl font-bold text-white">
-                          ${marketData.price?.toLocaleString() || 'N/A'}
+                          {marketData.price ? formatPrice(marketData.price) : 'N/A'}
                         </div>
                       </div>
 
@@ -895,13 +895,7 @@ export default function Home() {
                           ${formatNumber(marketData.marketCap)}
                         </div>
                       </div>
-                      {/* Market Rank Card */}
-                      <div className="bg-black/40 hidden md:block rounded-lg p-4 border border-gray-600/50">
-                        <div className="text-xs text-gray-400 mb-1">Market Rank</div>
-                        <div className="text-xl font-bold text-white">
-                          #{marketData.marketCapRank}
-                        </div>
-                      </div>
+
                     </div>
                   ) : (
                     <div className="text-center text-gray-500 py-12">
@@ -1581,7 +1575,7 @@ export default function Home() {
                 <span><a href="https://www.anthropic.com" target="_blank" rel="noopener noreferrer">Claude AI</a></span>
               </div>
             </div>
-            <p>Real-time sentiment and market analysis • Updated every refresh</p>
+            <p>Real-time sentiment and market analysis • Cached for 4 hours</p>
 
           </div>
         </div>
