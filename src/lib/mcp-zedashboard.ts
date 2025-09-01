@@ -26,6 +26,7 @@ interface ZeDashboardJsonData {
   sentimentScore?: number;
   postsCount?: number;
   engagement?: number;
+  tweetSuggestions?: string[];
   analytics?: {
     posts24h?: number;
     totalEngagement?: number;
@@ -49,6 +50,7 @@ export interface ZeDashboardSentimentResponse {
   averageEngagement: number;
   topEngagement: number;
   trendingPosts: TrendingPost[];
+  tweetSuggestions: string[];
   model: string;
   cacheStatus: string;
 }
@@ -158,14 +160,41 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
     console.log('🔍 Client state:', zeClient ? 'Client exists' : 'No client');
     console.log('🔍 Transport state:', zeTransport ? 'Transport exists' : 'No transport');
     
-    const response = await zeClient.callTool({
-      name: 'get_social_sentiment',
-      arguments: { topic }
-    });
+    // Try different topic formats if the first one fails
+    const topicVariations = [topic, topic.toUpperCase(), topic.toLowerCase()];
+    console.log('🔍 Will try topic variations:', topicVariations);
+    
+    let response;
+    let lastError;
+    
+    for (const topicVariation of topicVariations) {
+      try {
+        console.log(`🔄 Trying topic variation: "${topicVariation}"`);
+        response = await zeClient.callTool({
+          name: 'get_social_sentiment',
+          arguments: { topic: topicVariation }
+        });
+        console.log(`✅ Success with topic variation: "${topicVariation}"`);
+        break; // Success, exit the loop
+      } catch (error) {
+        console.log(`❌ Failed with topic variation "${topicVariation}":`, error);
+        lastError = error;
+        continue; // Try next variation
+      }
+    }
+    
+    if (!response) {
+      throw lastError || new Error('All topic variations failed');
+    }
 
     console.log('📡 Raw MCP response object:', response);
     console.log('📝 Response content:', response.content);
     console.log('📊 Response content length:', Array.isArray(response.content) ? response.content.length : 'Not an array');
+    
+    // Debug: Log the raw response for troubleshooting
+    if (response.content && Array.isArray(response.content) && response.content.length > 0) {
+      console.log('🔍 Raw response content[0]:', response.content[0]);
+    }
 
     if (!response.content || !Array.isArray(response.content) || response.content.length === 0) {
       throw new Error('No content received from ZeDashboard MCP server');
@@ -194,11 +223,37 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
     } catch (jsonError) {
       console.log('❌ Failed to parse as JSON, trying markdown parsing...');
       console.log('JSON parse error:', jsonError);
-      data = parseMarkdownResponse(rawText);
-      console.log('📖 Markdown parsing result:', data);
       
-      // Debug: Show what was extracted from markdown
-      console.log('🔍 Markdown extraction debug:', {
+      // First, try to extract JSON from the Raw API Response section
+      const rawApiStart = rawText.indexOf('## 🔍 Raw API Response');
+      if (rawApiStart !== -1) {
+        const rawApiSection = rawText.substring(rawApiStart);
+        const jsonStart = rawApiSection.indexOf('```json');
+        const jsonEnd = rawApiSection.indexOf('```', jsonStart + 7);
+        
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const jsonText = rawApiSection.substring(jsonStart + 7, jsonEnd);
+          try {
+            data = JSON.parse(jsonText);
+            console.log('✅ Successfully parsed JSON from Raw API Response section');
+            console.log('📊 Extracted JSON data:', JSON.stringify(data, null, 2));
+          } catch (nestedJsonError) {
+            console.log('❌ Failed to parse JSON from Raw API Response, falling back to markdown parsing');
+            data = parseMarkdownResponse(rawText);
+          }
+        } else {
+          console.log('❌ No JSON found in Raw API Response section, falling back to markdown parsing');
+          data = parseMarkdownResponse(rawText);
+        }
+      } else {
+        console.log('❌ No Raw API Response section found, falling back to markdown parsing');
+        data = parseMarkdownResponse(rawText);
+      }
+      
+      console.log('📖 Final parsing result:', data);
+      
+      // Debug: Show what was extracted
+      console.log('🔍 Extraction debug:', {
         extractedTopic: data.topic,
         extractedPostsCount: data.postsCount,
         extractedSentimentScore: data.sentimentScore,
@@ -206,7 +261,7 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
         extractedPostsInLast24h: data.postsInLast24h,
         extractedAverageEngagement: data.averageEngagement,
         extractedTopEngagement: data.topEngagement,
-        extractedTrendingPostsCount: data.trendingPosts.length
+        extractedTrendingPostsCount: data.trendingPosts?.length || 0
       });
     }
     
@@ -223,11 +278,11 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
       cached: data.cached || false,
       timestamp: data.timestamp || Date.now(),
       dataSource: data.dataSource || "LunarCrush Social Sentiment",
-      sentimentScore: (data.sentimentScore || 0) / 100, // Convert from 79 to 0.79
-      totalEngagement: data.totalEngagement || data.engagement || data.analytics?.totalEngagement || 0,
-      postsInLast24h: data.postsInLast24h || data.analytics?.posts24h || data.postsCount || 0,
-      averageEngagement: data.averageEngagement || data.analytics?.averageEngagement || 0,
-      topEngagement: data.topEngagement || data.analytics?.topEngagement || 0,
+      sentimentScore: (data.sentimentScore || 0) / 100, // Convert from 91 to 0.91
+      totalEngagement: data.engagement || data.totalEngagement || data.analytics?.totalEngagement || 0,
+      postsInLast24h: data.postsCount || data.postsInLast24h || data.analytics?.posts24h || 0,
+      averageEngagement: data.analytics?.averageEngagement || data.averageEngagement || 0,
+      topEngagement: data.analytics?.topEngagement || data.topEngagement || 0,
       trendingPosts: (data.trendingPosts || []).map((post: ZeDashboardPost) => ({
         title: post.title || '',
         engagement: post.interactions || post.engagement || 0,
@@ -238,6 +293,7 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
         id: post.id || '',
         creator: post.creator || null
       })),
+      tweetSuggestions: data.tweetSuggestions || [],
       model: data.model || "claude-sonnet-4-20250514",
       cacheStatus: data.cacheStatus || "Fresh Data"
     };
@@ -264,12 +320,14 @@ export async function getSocialSentiment(topic: string): Promise<ZeDashboardSent
       analyticsPosts24h: data.analytics?.posts24h,
       mappedPostsInLast24h: result.postsInLast24h,
       // Add engagement debugging
+      dataEngagement: data.engagement,
       dataTotalEngagement: data.totalEngagement,
-      dataAverageEngagement: data.averageEngagement,
-      dataTopEngagement: data.topEngagement,
+      dataAverageEngagement: data.analytics?.averageEngagement,
+      dataTopEngagement: data.analytics?.topEngagement,
       resultTotalEngagement: result.totalEngagement,
       resultAverageEngagement: result.averageEngagement,
-      resultTopEngagement: result.topEngagement
+      resultTopEngagement: result.topEngagement,
+      trendingPostsCount: data.trendingPosts?.length || 0
     });
 
     return result;
@@ -339,6 +397,7 @@ function parseMarkdownResponse(markdownText: string) {
     averageEngagement: 0,
     topEngagement: 0,
     trendingPosts: [],
+    tweetSuggestions: [],
     model: 'claude-sonnet-4-20250514',
     cacheStatus: 'Fresh Data'
   };
@@ -380,6 +439,9 @@ function parseMarkdownResponse(markdownText: string) {
         }
         if (jsonData.engagement !== undefined) {
           data.totalEngagement = jsonData.engagement;
+        }
+        if (jsonData.tweetSuggestions && Array.isArray(jsonData.tweetSuggestions)) {
+          data.tweetSuggestions = jsonData.tweetSuggestions;
         }
         if (jsonData.analytics) {
           data.postsInLast24h = jsonData.analytics.posts24h || 0;

@@ -6,7 +6,7 @@ import { connectZE, getSocialSentiment } from '@/lib/mcp-zedashboard';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Cache configuration - 4 hours in seconds
-const CACHE_DURATION = 4 * 60 * 60; // 4 hours
+const CACHE_DURATION = 1 * 60 * 60; // 4 hours
 
 // Type definitions
 interface MarketData {
@@ -60,6 +60,7 @@ interface SentimentData {
   postsInLast24h?: number;
   averageEngagement?: number;
   trendingPosts?: TrendingPost[];
+  tweetSuggestions?: string[];
   error?: string;
 }
 
@@ -234,6 +235,12 @@ export async function GET(request: Request) {
     console.log(`📡 Fetching sentiment data for ${selectedToken} (cached)...`);
     const sentimentData = [await getCachedSentimentData(selectedToken)];
     console.log(`✅ Fetched sentiment data for ${selectedToken}`);
+    console.log('🔍 Sentiment data debug:', {
+      success: sentimentData[0]?.success,
+      hasTweetSuggestions: sentimentData[0]?.success ? !!(sentimentData[0] as any)?.tweetSuggestions : false,
+      tweetSuggestionsCount: sentimentData[0]?.success ? ((sentimentData[0] as any)?.tweetSuggestions?.length || 0) : 0,
+      tweetSuggestions: sentimentData[0]?.success ? (sentimentData[0] as any)?.tweetSuggestions : undefined
+    });
 
     // 3. Generate cached AI analysis
     console.log('🤖 Generating AI analysis (cached)...');

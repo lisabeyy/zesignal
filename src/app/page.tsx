@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Users, Activity, Clock, Calendar } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface MarketData {
   price: number;
@@ -26,6 +27,7 @@ interface SentimentData {
   averageEngagement: number;
   topEngagement: number;
   trendingPosts: TrendingPost[];
+  tweetSuggestions: string[];
   model: string;
   cacheStatus: string;
 }
@@ -115,6 +117,7 @@ interface ApiSentimentData {
   averageEngagement?: number;
   topEngagement?: number;
   trendingPosts?: TrendingPost[];
+  tweetSuggestions?: string[];
   model?: string;
   cacheStatus?: string;
   error?: string;
@@ -194,6 +197,8 @@ export default function Home() {
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showTweetSuggestions, setShowTweetSuggestions] = useState(false);
 
   // Track viewport to adapt mobile/desktop behavior
   useEffect(() => {
@@ -202,6 +207,20 @@ export default function Home() {
     window.addEventListener('resize', updateIsMobile);
     return () => window.removeEventListener('resize', updateIsMobile);
   }, []);
+
+  // Handle escape key to close tweet suggestions modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showTweetSuggestions) {
+        setShowTweetSuggestions(false);
+      }
+    };
+
+    if (showTweetSuggestions) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showTweetSuggestions]);
 
   // Scroll to top when analysis modal opens on mobile
   useEffect(() => {
@@ -351,11 +370,40 @@ export default function Home() {
         throw new Error(result.error || 'Failed to fetch data');
       }
 
+      // Debug logging
+      console.log('🔍 Frontend Debug - API Response:', {
+        success: result.success,
+        marketDataCount: result.marketData?.length || 0,
+        sentimentDataCount: result.sentimentData?.length || 0,
+        sentimentDataDetails: result.sentimentData?.map(s => ({
+          coin: s.coin,
+          success: s.success,
+          hasSummary: !!s.summary,
+          summaryLength: s.summary?.length || 0,
+          error: s.error
+        })) || []
+      });
+
 
       // Find the specific crypto data
       const crypto = cryptoOptions.find(c => c.id === cryptoId);
       const coinMarketData = result.marketData.find((coin: ApiMarketData) => coin.id === cryptoId);
       const coinSentimentData = result.sentimentData.find((sentiment: ApiSentimentData) => sentiment.coin === cryptoId);
+
+      // Debug logging for data matching
+      console.log('🔍 Frontend Debug - Data Matching:', {
+        cryptoId,
+        cryptoFound: !!crypto,
+        coinMarketDataFound: !!coinMarketData,
+        coinSentimentDataFound: !!coinSentimentData,
+        coinSentimentData: coinSentimentData ? {
+          coin: coinSentimentData.coin,
+          success: coinSentimentData.success,
+          hasSummary: !!coinSentimentData.summary,
+          summaryLength: coinSentimentData.summary?.length || 0,
+          error: coinSentimentData.error
+        } : null
+      });
 
 
       if (coinMarketData) {
@@ -371,6 +419,13 @@ export default function Home() {
       }
 
       if (coinSentimentData && coinSentimentData.success) {
+        console.log('🔍 Frontend sentiment data debug:', {
+          success: coinSentimentData.success,
+          hasTweetSuggestions: !!coinSentimentData.tweetSuggestions,
+          tweetSuggestionsCount: coinSentimentData.tweetSuggestions?.length || 0,
+          tweetSuggestions: coinSentimentData.tweetSuggestions
+        });
+
         setSentimentData({
           score: coinSentimentData.sentimentScore || 0.5,
           volume: coinSentimentData.postsCount || 0,
@@ -383,9 +438,19 @@ export default function Home() {
           averageEngagement: coinSentimentData.averageEngagement || 0,
           topEngagement: coinSentimentData.topEngagement || 0,
           trendingPosts: coinSentimentData.trendingPosts || [],
+          tweetSuggestions: coinSentimentData.tweetSuggestions || [],
           model: coinSentimentData.model || "claude-sonnet-4-20250514",
           cacheStatus: coinSentimentData.cacheStatus || "Fresh Data"
         });
+
+        // Debug the new state after setting it
+        setTimeout(() => {
+          console.log('🔍 Final sentimentData state after setState:', {
+            hasTweetSuggestions: !!coinSentimentData.tweetSuggestions,
+            tweetSuggestionsCount: coinSentimentData.tweetSuggestions?.length || 0,
+            tweetSuggestions: coinSentimentData.tweetSuggestions
+          });
+        }, 100);
       } else if (coinSentimentData && !coinSentimentData.success) {
         // Show error message for failed sentiment fetch
         setError(`Sentiment analysis failed for ${cryptoId}: ${coinSentimentData.error || 'Unknown error'}`);
@@ -519,13 +584,8 @@ export default function Home() {
 
   const cleanSummaryText = (text: string) => {
     if (!text) return '';
-    // Remove markdown headers and clean up the text
-    return text
-      .replace(/^#{1,6}\s*.*$/gm, '') // Remove header lines
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
-      .replace(/\n\s*\n/g, '\n') // Remove extra blank lines
-      .trim();
+    // Return markdown text as-is without any formatting changes
+    return text;
   };
 
   useEffect(() => {
@@ -992,19 +1052,50 @@ export default function Home() {
                             <div className="space-y-3">
                               {/* Show first section header if available */}
                               {(() => {
-                                const sections = cleanSummaryText(sentimentData.summary).split(/(?=Overall Assessment:|Key Insights:|Market Sentiment:|Social Trends:|Risk Factors:|Opportunities:|Conclusion:)/);
+                                const sections = cleanSummaryText(sentimentData.summary);
                                 const firstSection = sections[0];
                                 if (firstSection && firstSection.length > 50) {
                                   return (
                                     <div className="text-base text-gray-200 leading-relaxed font-medium tracking-wide">
-                                      {firstSection.substring(0, 200)}...
+                                      {cleanSummaryText(firstSection.substring(0, 200)) + '...'}
                                     </div>
                                   );
                                 }
                                 return (
-                                  <p className="text-base text-gray-200 leading-relaxed font-medium tracking-wide">
-                                    {cleanSummaryText(sentimentData.summary).substring(0, 300)}...
-                                  </p>
+                                  <div className="markdown-content text-gray-200">
+                                    <ReactMarkdown
+                                      components={{
+                                        h1: ({ children }) => <h1 className="text-2xl font-bold text-lime-300 mb-4">{children}</h1>,
+                                        h2: ({ children }) => <h2 className="text-xl font-bold text-lime-300 mb-3">{children}</h2>,
+                                        h3: ({ children }) => <h3 className="text-lg font-bold text-lime-300 mb-2">{children}</h3>,
+                                        p: ({ children }) => <p className="mb-3 leading-relaxed">{children}</p>,
+                                        strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                        ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1">{children}</ul>,
+                                        li: ({ children }) => <li className="flex items-start"><span className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2 mr-2 flex-shrink-0"></span><span>{children}</span></li>,
+                                        ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1 list-decimal">{children}</ol>
+                                      }}
+                                    >
+                                      {(() => {
+                                        // Smart truncation that preserves markdown structure
+                                        const summary = sentimentData.summary;
+                                        if (summary.length <= 300) return summary;
+
+                                        // Find a good break point (end of sentence, paragraph, or section)
+                                        let truncateAt = 300;
+                                        const breakPoints = ['. ', '\n\n', '## ', '### '];
+
+                                        for (const breakPoint of breakPoints) {
+                                          const lastBreak = summary.lastIndexOf(breakPoint, 300);
+                                          if (lastBreak > 200) { // Don't truncate too early
+                                            truncateAt = lastBreak + (breakPoint === '. ' ? 1 : breakPoint.length);
+                                            break;
+                                          }
+                                        }
+
+                                        return summary.substring(0, truncateAt) + '...';
+                                      })()}
+                                    </ReactMarkdown>
+                                  </div>
                                 );
                               })()}
                             </div>
@@ -1022,39 +1113,21 @@ export default function Home() {
                       ) : (
                         <>
                           <div className="bg-transparent md:bg-gray-800/30 rounded-lg p-3 md:p-4 border border-transparent md:border md:border-gray-600/30 mb-4">
-                            <div className="space-y-4">
-                              {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => {
-                                if (!line) return null;
-
-                                return (
-                                  <div key={line.key} className={`${line.isSectionHeader
-                                    ? 'pb-3 border-b border-gray-600/30'
-                                    : line.isListItem
-                                      ? 'ml-6 flex items-start'
-                                      : ''
-                                    }`}>
-                                    {line.isSectionHeader ? (
-                                      // Section Header
-                                      <div className="text-lg font-bold text-lime-300 mb-3">
-                                        {line.text}
-                                      </div>
-                                    ) : line.isListItem ? (
-                                      // List Item
-                                      <div className="flex items-start space-x-2">
-                                        <div className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2.5 flex-shrink-0"></div>
-                                        <span className="text-gray-200 text-base leading-relaxed font-medium tracking-wide">
-                                          {line.text}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      // Regular Text
-                                      <div className={`${line.isBold ? 'font-bold text-white text-base' : 'text-gray-200 text-base'} leading-relaxed font-medium tracking-wide`}>
-                                        {line.text}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                            <div className="markdown-content text-gray-200">
+                              <ReactMarkdown
+                                components={{
+                                  h1: ({ children }) => <h1 className="text-2xl font-bold text-lime-300 mb-4">{children}</h1>,
+                                  h2: ({ children }) => <h2 className="text-xl font-bold text-lime-300 mb-3">{children}</h2>,
+                                  h3: ({ children }) => <h3 className="text-lg font-bold text-lime-300 mb-2">{children}</h3>,
+                                  p: ({ children }) => <p className="mb-3 leading-relaxed">{children}</p>,
+                                  strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                  ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1">{children}</ul>,
+                                  li: ({ children }) => <li className="flex items-start"><span className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2 mr-2 flex-shrink-0"></span><span>{children}</span></li>,
+                                  ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1 list-decimal">{children}</ol>
+                                }}
+                              >
+                                {sentimentData.summary}
+                              </ReactMarkdown>
                             </div>
                           </div>
                           <button
@@ -1091,36 +1164,21 @@ export default function Home() {
 
                           <div className="px-4 py-4">
                             <div className="rounded-lg">
-                              <div className="space-y-4">
-                                {formatSentimentText(cleanSummaryText(sentimentData.summary)).map((line) => {
-                                  if (!line) return null;
-
-                                  return (
-                                    <div key={line.key} className={`${line.isSectionHeader
-                                      ? 'pb-3 border-b border-gray-700'
-                                      : line.isListItem
-                                        ? 'ml-6 flex items-start'
-                                        : ''
-                                      }`}>
-                                      {line.isSectionHeader ? (
-                                        <div className="text-lg font-bold text-lime-300 mb-3">
-                                          {line.text}
-                                        </div>
-                                      ) : line.isListItem ? (
-                                        <div className="flex items-start space-x-2">
-                                          <div className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2.5 flex-shrink-0"></div>
-                                          <span className="text-gray-200 text-base leading-relaxed font-medium tracking-wide">
-                                            {line.text}
-                                          </span>
-                                        </div>
-                                      ) : (
-                                        <div className={`${line.isBold ? 'font-bold text-white text-base' : 'text-gray-200 text-base'} leading-relaxed font-medium tracking-wide`}>
-                                          {line.text}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                              <div className="markdown-content text-gray-200">
+                                <ReactMarkdown
+                                  components={{
+                                    h1: ({ children }) => <h1 className="text-2xl font-bold text-lime-300 mb-4">{children}</h1>,
+                                    h2: ({ children }) => <h2 className="text-xl font-bold text-lime-300 mb-3">{children}</h2>,
+                                    h3: ({ children }) => <h3 className="text-lg font-bold text-lime-300 mb-2">{children}</h3>,
+                                    p: ({ children }) => <p className="mb-3 leading-relaxed">{children}</p>,
+                                    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                                    ul: ({ children }) => <ul className="mb-3 ml-4 space-y-1">{children}</ul>,
+                                    li: ({ children }) => <li className="flex items-start"><span className="w-1.5 h-1.5 bg-lime-400 rounded-full mt-2 mr-2 flex-shrink-0"></span><span>{children}</span></li>,
+                                    ol: ({ children }) => <ol className="mb-3 ml-4 space-y-1 list-decimal">{children}</ol>
+                                  }}
+                                >
+                                  {sentimentData.summary}
+                                </ReactMarkdown>
                               </div>
                             </div>
                           </div>
@@ -1129,6 +1187,45 @@ export default function Home() {
                     )}
 
 
+
+                    {/* Tweet Suggestions Button - Full Width Below Everything */}
+                    {(() => {
+                      console.log('🔍 Tweet suggestions render check:', {
+                        hasSentimentData: !!sentimentData,
+                        hasTweetSuggestions: !!sentimentData?.tweetSuggestions,
+                        isArray: Array.isArray(sentimentData?.tweetSuggestions),
+                        length: sentimentData?.tweetSuggestions?.length || 0,
+                        tweetSuggestions: sentimentData?.tweetSuggestions
+                      });
+                      return sentimentData && sentimentData.tweetSuggestions && Array.isArray(sentimentData.tweetSuggestions) && sentimentData.tweetSuggestions.length > 0;
+                    })() && (
+                        <div className="bg-black/40 rounded-lg p-3 md:p-4 border border-gray-600/50">
+                          <button
+                            onClick={() => setShowTweetSuggestions(true)}
+                            className="w-full flex items-center justify-between p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg border border-blue-500/30 hover:border-blue-500/50 transition-all duration-200 group"
+                          >
+                            <div className="flex items-center">
+                              <div className="w-5 h-5 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
+                                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                              </div>
+                              <div className="text-left">
+                                <h5 className="text-sm font-semibold text-gray-300 group-hover:text-blue-300 transition-colors">
+                                  Tweet Suggestions
+                                </h5>
+                                <p className="text-xs text-gray-400 group-hover:text-blue-400 transition-colors">
+                                  {sentimentData.tweetSuggestions.length} AI-generated tweet ideas
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-blue-400 font-medium">View</span>
+                              <svg className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </button>
+                        </div>
+                      )}
 
                     {/* Trending Posts - Full Width Below Everything */}
                     {sentimentData && sentimentData.trendingPosts && Array.isArray(sentimentData.trendingPosts) && sentimentData.trendingPosts.length > 0 && (
@@ -1580,6 +1677,100 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Tweet Suggestions Modal */}
+      {showTweetSuggestions && sentimentData?.tweetSuggestions && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden border border-gray-600">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center mr-3">
+                  <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                </div>
+                <h3 className="text-lg font-semibold text-white">Tweet Suggestions</h3>
+              </div>
+              <button
+                onClick={() => setShowTweetSuggestions(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-4">
+                {sentimentData.tweetSuggestions.map((suggestion, index) => (
+                  <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50 hover:border-gray-600/50 transition-all">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <span className="text-sm font-bold text-blue-400">{index + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-200 text-sm leading-relaxed font-medium mb-3">
+                          {suggestion}
+                        </p>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(suggestion);
+                              setToastMessage('Tweet suggestion copied to clipboard!');
+                              setTimeout(() => setToastMessage(null), 3000);
+                            }}
+                            className="flex items-center space-x-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 rounded-md transition-all text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span>Copy</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(suggestion)}`;
+                              window.open(twitterUrl, '_blank');
+                            }}
+                            className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 rounded-md transition-all text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                            </svg>
+                            <span>Tweet</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-400">
+                  AI-generated suggestions based on current market sentiment
+                </p>
+                <button
+                  onClick={() => setShowTweetSuggestions(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
+          {toastMessage}
+        </div>
+      )}
     </>
   );
 }
