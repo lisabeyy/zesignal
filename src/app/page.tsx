@@ -733,6 +733,19 @@ export default function Home() {
                 </a>
               </div>
 
+              {/* API Documentation */}
+              <div className="pt-4 border-t border-gray-700">
+                <div className="text-white text-lg font-semibold mb-3">📚 API Documentation</div>
+                <div className="text-gray-300 text-sm mb-3">Integrate ZeSignal's capabilities into your own applications</div>
+                <a href="https://zedashboard.xyz/api-docs" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 text-blue-400 hover:text-blue-300 px-4 py-3 bg-blue-500/10 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-all">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-lg font-medium">View API Documentation</span>
+                </a>
+                <div className="text-gray-400 text-xs mt-2 text-center">Access endpoints, authentication, and integration examples</div>
+              </div>
+
               {/* Donation Section */}
               <div className="pt-4 border-t border-gray-700">
                 <div className="text-white text-lg font-semibold mb-3">💝 Support the Project</div>
@@ -761,6 +774,19 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
+                {/* API Documentation Button */}
+                <a
+                  href="https://zedashboard.xyz/api-docs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg border border-blue-500/30 hover:border-blue-500/50 transition-all"
+                >
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-sm text-blue-400 hidden sm:inline">API Docs</span>
+                </a>
+
                 {/* About Button */}
                 <button
                   onClick={() => setShowAboutModal(true)}
@@ -858,6 +884,24 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Developer Integration */}
+                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-300 mb-1"> Developer Integration</h4>
+                      <p className="text-xs text-blue-400/80">Integrate ZeSignal's AI-powered insights into your applications</p>
+                    </div>
+                    <a
+                      href="https://zedashboard.xyz/api-docs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 text-xs font-medium transition-all duration-200"
+                    >
+                      View API Docs
+                    </a>
+                  </div>
+                </div>
+
                 {/* CTA */}
                 <div className="bg-gray-800/20 rounded-lg p-4 border border-gray-700/30">
                   <p className="text-sm text-gray-300 mb-3">💡 <strong>Pro tip:</strong> Start with Bitcoin for comprehensive market analysis</p>
@@ -924,7 +968,7 @@ export default function Home() {
                   {marketData ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       {/* Price Card */}
-                      <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50 md:col-span-2">
+                      <div className="bg-black/40 rounded-lg p-4 border border-gray-600/50 ">
                         <div className="text-xs text-gray-400 mb-1">Current Price</div>
                         <div className="text-2xl font-bold text-white">
                           {marketData.price ? formatPrice(marketData.price) : 'N/A'}
