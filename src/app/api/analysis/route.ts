@@ -53,7 +53,8 @@ interface TrendingPost {
 }
 
 interface SentimentData {
-  coin: string;
+  coin?: string;
+  topic?: string;
   success: boolean;
   sentimentScore?: number;
   totalEngagement?: number;
@@ -61,6 +62,14 @@ interface SentimentData {
   averageEngagement?: number;
   trendingPosts?: TrendingPost[];
   tweetSuggestions?: string[];
+  summary?: string;
+  postsCount?: number;
+  cached?: boolean;
+  timestamp?: number;
+  dataSource?: string;
+  topEngagement?: number;
+  model?: string;
+  cacheStatus?: string;
   error?: string;
 }
 
@@ -237,9 +246,9 @@ export async function GET(request: Request) {
     console.log(`✅ Fetched sentiment data for ${selectedToken}`);
     console.log('🔍 Sentiment data debug:', {
       success: sentimentData[0]?.success,
-      hasTweetSuggestions: sentimentData[0]?.success ? !!(sentimentData[0] as any)?.tweetSuggestions : false,
-      tweetSuggestionsCount: sentimentData[0]?.success ? ((sentimentData[0] as any)?.tweetSuggestions?.length || 0) : 0,
-      tweetSuggestions: sentimentData[0]?.success ? (sentimentData[0] as any)?.tweetSuggestions : undefined
+      hasTweetSuggestions: sentimentData[0]?.success && 'tweetSuggestions' in sentimentData[0] ? !!(sentimentData[0].tweetSuggestions) : false,
+      tweetSuggestionsCount: sentimentData[0]?.success && 'tweetSuggestions' in sentimentData[0] ? (sentimentData[0].tweetSuggestions?.length || 0) : 0,
+      tweetSuggestions: sentimentData[0]?.success && 'tweetSuggestions' in sentimentData[0] ? sentimentData[0].tweetSuggestions : undefined
     });
 
     // 3. Generate cached AI analysis
