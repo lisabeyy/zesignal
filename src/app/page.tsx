@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Users, Activity, Clock, Calendar } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image';
 
 interface MarketData {
   price: number;
@@ -736,7 +737,7 @@ export default function Home() {
               {/* API Documentation */}
               <div className="pt-4 border-t border-gray-700">
                 <div className="text-white text-lg font-semibold mb-3">📚 API Documentation</div>
-                <div className="text-gray-300 text-sm mb-3">Integrate ZeSignal's capabilities into your own applications</div>
+                <div className="text-gray-300 text-sm mb-3">Integrate ZeSignal&apos;s capabilities into your own applications</div>
                 <a href="https://zedashboard.xyz/api-docs" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 text-blue-400 hover:text-blue-300 px-4 py-3 bg-blue-500/10 rounded-lg border border-blue-500/20 hover:bg-blue-500/20 transition-all">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -768,7 +769,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <img src="/logo.png" alt="ZeSignal Logo" className="h-8 w-auto" />
+                <Image src="/logo.png" alt="ZeSignal Logo" width={32} height={32} className="h-8 w-auto" />
                 <div className="hidden sm:block text-sm text-gray-500 px-3 py-1 bg-gray-800/50 rounded-full">
                   AI-Powered Crypto Intelligence
                 </div>
@@ -889,7 +890,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium text-blue-300 mb-1"> Developer Integration</h4>
-                      <p className="text-xs text-blue-400/80">Integrate ZeSignal's AI-powered insights into your applications</p>
+                      <p className="text-xs text-blue-400/80">Integrate ZeSignal&apos;s AI-powered insights into your applications</p>
                     </div>
                     <a
                       href="https://zedashboard.xyz/api-docs"
@@ -1291,9 +1292,11 @@ export default function Home() {
                                   <div className="flex items-center space-x-3 mb-3">
                                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
                                       {post.creator.avatar ? (
-                                        <img
+                                        <Image
                                           src={post.creator.avatar}
                                           alt={post.creator.displayName || post.creator.name}
+                                          width={40}
+                                          height={40}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
@@ -1356,9 +1359,11 @@ export default function Home() {
                                   <div className="flex items-center space-x-3 mb-3">
                                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
                                       {post.creator.avatar ? (
-                                        <img
+                                        <Image
                                           src={post.creator.avatar}
                                           alt={post.creator.displayName || post.creator.name}
+                                          width={40}
+                                          height={40}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
