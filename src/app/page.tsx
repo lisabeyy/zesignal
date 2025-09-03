@@ -769,7 +769,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Image src="/logo.png" alt="ZeSignal Logo" width={32} height={32} className="h-8 w-auto" />
+                <Image src="/logo.svg" alt="ZeSignal Logo" width={32} height={32} className="h-8 w-auto" />
                 <div className="hidden sm:block text-sm text-gray-500 px-3 py-1 bg-gray-800/50 rounded-full">
                   AI-Powered Crypto Intelligence
                 </div>
